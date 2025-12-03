@@ -27,18 +27,7 @@ services:
       - "5435:5432"
     restart: unless-stopped
 
-  smtp4dev:
-    image: rnwood/smtp4dev:linux-amd64-v3
-    container_name: shoppassport_smtp4dev
-    ports:
-      - "3005:80"
-      - "2527:25"
-    volumes:
-      - smtp4dev_data:/smtp4dev
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   static_volume:
   media_volume:
-  smtp4dev_data:

@@ -10,6 +10,9 @@ WORKDIR /app
 
 # Install system dependencies including ffmpeg
 RUN apt-get update \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
