@@ -47,7 +47,12 @@ INSTALLED_APPS = [
     "firebase_admin",
 
     # Local apps
-    "apps.accounts"
+    "apps.accounts",
+    "apps.shop",
+    "apps.core",
+    "apps.shopadmin",
+    "apps.shopowner",
+    "apps.shopper",
 
 ]
 
