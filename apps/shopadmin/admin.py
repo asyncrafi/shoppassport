@@ -1,9 +1,9 @@
 from django.contrib import admin
-from apps.shopadmin.models import CreateEvent
+from apps.shopadmin.models import Event
 
-@admin.register(CreateEvent)
-class CreateEvent(admin.ModelAdmin):
-    list_display = ('user', 'shop', 'created_at')
-    search_fields = ('user__username', 'shop__name')
+@admin.register(Event)
+class Event(admin.ModelAdmin):
+    list_display = ('shop_admin', 'name', 'created_at')
+    search_fields = ('shop_admin__username', 'name')
     list_filter = ('created_at',)
 

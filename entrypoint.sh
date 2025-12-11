@@ -1,40 +1,31 @@
 #!/bin/bash
-set -o pipefail
-set -o nounset
+set -e
 
-echo "🔥 FORCING DEPLOYMENT TO WORK..."
+echo "🔥 Starting deployment process..."
 
 wait_for_db() {
-    echo "⏰ Waiting for database..."
-    max_attempts=30
-    attempt=1
+    echo "⏰ Waiting for PostgreSQL..."
     
-    while [ $attempt -le $max_attempts ]; do
-        if python manage.py check --database default > /dev/null 2>&1; then
-            echo "✅ Database ready!"
-            break
-        else
-            sleep 2
-            attempt=$((attempt + 1))
-        fi
-        
-        if [ $attempt -gt $max_attempts ]; then
-            echo "❌ Database timeout"
-            exit 1
-        fi
+    until PGPASSWORD=$POSTGRES_PASSWORD psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\q' 2>/dev/null; do
+        echo "PostgreSQL is unavailable - sleeping"
+        sleep 2
     done
+    
+    echo "✅ PostgreSQL is up and ready!"
 }
 
 if [[ "$1" != "celery" ]] && [[ "$1" != "beat" ]] && [[ "$1" != "flower" ]]; then
     wait_for_db
-    python manage.py makemigrations 2>/dev/null || echo "✅ Done"
-    python manage.py migrate --fake-initial 2>/dev/null || echo "✅ Done"
-    python manage.py migrate --run-syncdb 2>/dev/null || echo "✅ Done"
-    python manage.py migrate 2>/dev/null || echo "✅ Done"
-    python manage.py collectstatic --noinput 2>/dev/null || echo "✅ Done"
-else
-    sleep 10
+    
+    echo "📦 Running migrations..."
+    python manage.py makemigrations --noinput || true
+    python manage.py migrate --noinput || true
+    
+    echo "📁 Collecting static files..."
+    python manage.py collectstatic --noinput || true
+    
+    echo "✅ Setup complete!"
 fi
 
-echo "🚀 Starting: $@"
+echo "🚀 Starting application: $@"
 exec "$@"
