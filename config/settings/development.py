@@ -1,4 +1,5 @@
 from .base import *
+import dj_database_url
 
 print("🔧 Running in DEVELOPMENT mode")
 
@@ -10,16 +11,39 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS_DEV")
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Database for development
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB"),
-        "USER": env("POSTGRES_USER"),
-        "PASSWORD": env("POSTGRES_PASSWORD"),
-        "HOST": env("POSTGRES_HOST"),
-        "PORT": env("POSTGRES_PORT"),
+
+if env('DATABASE_URL'):
+    # Production: Use DATABASE_URL from Render
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    # Local Development: Use individual vars
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env("POSTGRES_DB"),
+            "USER": env("POSTGRES_USER"),
+            "PASSWORD": env("POSTGRES_PASSWORD"),
+            "HOST": env("POSTGRES_HOST"),
+            "PORT": env("POSTGRES_PORT"),
+        }
+    }
+
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": env("POSTGRES_DB"),
+#         "USER": env("POSTGRES_USER"),
+#         "PASSWORD": env("POSTGRES_PASSWORD"),
+#         "HOST": env("POSTGRES_HOST"),
+#         "PORT": env("POSTGRES_PORT"),
+#     }
+# }
 
 EMAIL_HOST = env.str('EMAIL_HOST_DEV', default='smtp4dev')  # For string values
 EMAIL_PORT = env.int('EMAIL_PORT_DEV', default=25)          # For integer values
