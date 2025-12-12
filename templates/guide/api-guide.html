@@ -13,17 +13,65 @@
             padding: 20px;
             line-height: 1.6;
             color: #333;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+        }
+
+        .team-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .team-member {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .team-member strong {
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 4px;
+        }
+
+        .team-member em {
+            font-size: 0.9em;
+            opacity: 0.9;
         }
 
         h1 {
             color: #2c3e50;
             border-bottom: 3px solid #3498db;
             padding-bottom: 10px;
+            font-size: 2.2em;
+            margin-top: 0;
         }
 
         h2 {
             color: #34495e;
             margin-top: 30px;
+            font-size: 1.6em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         code {  
@@ -32,22 +80,65 @@
             border-radius: 4px;
             font-family: 'Monaco', 'Consolas', monospace;
             border: 1px solid #e9ecef;
+            font-size: 0.9em;
         }
 
         .endpoint {
-            background: #e8f5e8;
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
             padding: 15px;
             border-left: 4px solid #27ae60;
             margin: 15px 0;
-            border-radius: 4px;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+
+        .endpoint:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
         }
 
         .auth-flow {
-            background: #fff3cd;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
             padding: 15px;
             border-left: 4px solid #ffc107;
             margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .email-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 20px;
+            border-left: 4px solid #2196F3;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+        }
+
+        .credential-box {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border: 1px solid #90caf9;
+            font-family: 'Monaco', 'Consolas', monospace;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .copy-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
             border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #1976D2;
         }
 
         .error-codes {
@@ -64,12 +155,17 @@
             border-radius: 4px;
             font-family: monospace;
             font-size: 0.9em;
+            transition: transform 0.2s;
+        }
+
+        .error-code:hover {
+            transform: scale(1.05);
         }
 
         .links {
-            background: #d1ecf1;
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
             padding: 15px;
-            border-radius: 4px;
+            border-radius: 8px;
             margin: 15px 0;
         }
 
@@ -77,125 +173,281 @@
             color: #0c5460;
             text-decoration: none;
             font-weight: 500;
+            transition: color 0.2s;
         }
 
         .links a:hover {
+            color: #062a30;
             text-decoration: underline;
         }
 
         .response-format {
-            background: #f8f9fa;
+            background: #2d2d2d;
+            color: #f8f8f2;
             padding: 15px;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-            font-family: monospace;
+            border-radius: 8px;
+            border: 1px solid #444;
+            font-family: 'Monaco', 'Consolas', monospace;
             white-space: pre-line;
+            overflow-x: auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-new {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .badge-important {
+            background: #ffd93d;
+            color: #333;
+        }
+
+        .tip-box {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #e17055;
+        }
+
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .server-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .server-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .emoji-header {
+            font-size: 1.4em;
+            margin-right: 8px;
         }
     </style>
 </head>
 
 <body>
-    <h1>🧩 API Integration Guide - Hop Across</h1>
-    <p style="color: #666; margin-bottom: 30px;">
-        Crafted by
-        <a href="https://wa.me/8801743568504" target="_blank" rel="noopener noreferrer"
-            style="color: #0366d6; text-decoration: none;" title="Chat with Rafi on WhatsApp">
-            <strong>[Rafi]</strong>
-        </a> •
-        Welcome, bro! 🤝 — Feel free to reach out if you have questions.
-        <a href="https://wa.me/8801743568504" target="_blank" rel="noopener noreferrer"
-            style="color: #0366d6; text-decoration: none; margin-left: 5px;" title="Message Rafi on WhatsApp">
-            💬
-        </a>
-    </p>
+    <div class="container">
+        <div class="team-header">
+            <h1 style="color: white; border: none; margin: 0; padding: 0;">🛍️ Shop Hop - Hop Across America API</h1>
+            <p style="margin: 15px 0 20px 0; opacity: 0.95;">
+                Your complete guide to integrating with the Shop Hop API 🚀
+            </p>
+            
+            <div class="team-grid">
+                <div class="team-member">
+                    <strong>🔧 Rafi</strong>
+                    <em>Backend Developer</em>
+                    <div style="margin-top: 8px;">
+                        <a href="https://wa.me/8801743568504" target="_blank" 
+                           style="color: white; text-decoration: none; font-size: 0.9em;">
+                            💬 WhatsApp
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="team-member">
+                    <strong>📱 Mustasim Fuad</strong>
+                    <em>Mobile App Developer</em>
+                </div>
+                
+                <div class="team-member">
+                    <strong>🌐 Zinan</strong>
+                    <em>Frontend Web Developer</em>
+                </div>
+            </div>
+        </div>
 
-    <div
-        style="background: #fff3cd; padding: 12px; border-radius: 4px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
-        <code style="color: #856404;">
-        ⚠️ Warning: Contains just enough 🐞🐛 to keep life interesting — happy debugging! 🔧
-    </code>
+        <div class="tip-box">
+            <strong>⚠️ Developer Mode:</strong> This guide contains just enough bugs to keep you on your toes! 
+            Coffee recommended ☕ — Happy debugging! 🔧
+        </div>
+
+        <h2><span class="emoji-header">🌐</span>Server Configuration</h2>
+        
+        <div class="server-grid">
+            <div class="server-card">
+                <h3 style="color: #667eea; margin-top: 0;">🚀 Main API Server</h3>
+                <div class="credential-box">
+                    <span>https://shoppassport.onrender.com</span>
+                </div>
+                <p style="color: #666; font-size: 0.9em; margin: 10px 0 0 0;">
+                    All your shop hopping endpoints live here!
+                </p>
+            </div>
+        </div>
+
+        <div class="email-section">
+            <h3 style="margin-top: 0; color: #1565C0;">
+                📮 Mailtrap Email Testing Credentials
+                <span class="badge badge-important">IMPORTANT</span>
+            </h3>
+            
+            <p style="color: #555; margin-bottom: 15px;">
+                <strong>🔗 Dashboard:</strong> 
+                <a href="https://mailtrap.io" target="_blank" style="color: #2196F3;">
+                    https://mailtrap.io
+                </a>
+            </p>
+
+            <div style="margin: 15px 0;">
+                <strong style="color: #1565C0;">📧 Email:</strong>
+                <div class="credential-box">
+                    <code style="border: none; background: none;">towara7838@crsay.com</code>
+                    <button class="copy-btn" onclick="copyToClipboard('towara7838@crsay.com')">📋 Copy</button>
+                </div>
+            </div>
+
+            <div style="margin: 15px 0;">
+                <strong style="color: #1565C0;">🔑 Password:</strong>
+                <div class="credential-box">
+                    <code style="border: none; background: none;">.&lt;HrfeEhJ8hSiXL</code>
+                    <button class="copy-btn" onclick="copyToClipboard('.<HrfeEhJ8hSiXL')">📋 Copy</button>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                <strong>💡 Quick Tip:</strong> Use Mailtrap to catch all test emails without spamming real inboxes. 
+                Perfect for testing OTPs, password resets, and welcome emails! 🎯
+            </div>
+        </div>
+
+        <h2><span class="emoji-header">🔐</span>Authentication Endpoints</h2>
+
+        <div class="endpoint">
+            <strong>🔑 Login:</strong> <code>POST /api/auth/login/</code><br>
+            <em>Send email & password → Get access & refresh tokens</em>
+        </div>
+
+        <div class="endpoint">
+            <strong>🔄 Refresh Token:</strong> <code>POST /api/token/refresh/</code><br>
+            <em>Send refresh token → Get new access token (no re-login needed!)</em>
+        </div>
+
+        <div class="endpoint">
+            <strong>📝 Register:</strong> <code>POST /api/auth/register/</code><br>
+            <em>Create account → Get tokens immediately</em>
+        </div>
+
+        <div class="endpoint">
+            <strong>🧪 Create Test Users:</strong> 
+            <code>POST /api/create-test-users/</code>
+            <span class="badge badge-new">NEW</span><br>
+            <em>Generate all 4 user types instantly (Shopper, Event Admin, Shop Admin, Super Admin)</em>
+        </div>
+
+        <h2><span class="emoji-header">🔄</span>Authentication Flow</h2>
+        <div class="auth-flow">
+            <strong>Step 1:</strong> Login with credentials → Get <code>access</code> + <code>refresh</code> tokens 🎫<br>
+            <strong>Step 2:</strong> Use <code>Authorization: Bearer &lt;access_token&gt;</code> for all API calls 🔒<br>
+            <strong>Step 3:</strong> When access token expires → Use refresh endpoint 🔄<br>
+            <strong>Step 4:</strong> Repeat Step 3 (no need to login again!) 🎉
+        </div>
+
+        <h2><span class="emoji-header">📝</span>Standard Response Format</h2>
+        <div class="response-format">{
+    "success": true/false,
+    "message": "Human-readable message",
+    "timestamp": "2025-06-30T10:30:00Z",
+    "status_code": 200,
+    "data": {...}, // Only on success
+    "error_code": "...", // Only on errors
+    "errors": {...} // Only on validation errors
+}</div>
+
+        <h2><span class="emoji-header">⚠️</span>Error Codes Reference</h2>
+        <p style="color: #666; margin-bottom: 10px;">Use these instead of HTTP status codes for better error handling:</p>
+        <div class="error-codes">
+            <span class="error-code">VALIDATION_ERROR</span>
+            <span class="error-code">NOT_AUTHENTICATED</span>
+            <span class="error-code">AUTHENTICATION_FAILED</span>
+            <span class="error-code">PERMISSION_DENIED</span>
+            <span class="error-code">RESOURCE_NOT_FOUND</span>
+            <span class="error-code">RATE_LIMITED</span>
+            <span class="error-code">INTEGRITY_ERROR</span>
+        </div>
+
+        <h2><span class="emoji-header">💡</span>Pro Tips for Frontend Devs</h2>
+        <ul style="line-height: 1.8;">
+            <li>✅ Always check <code>response.success</code> first (it's your friend!)</li>
+            <li>✅ Use <code>error_code</code> for programmatic error handling (cleaner than status codes)</li>
+            <li>✅ Display <code>message</code> to users (it's already human-friendly)</li>
+            <li>✅ Store refresh token securely for auto-refresh (localStorage is your friend)</li>
+            <li>✅ Use interactive docs below for testing (way easier than Postman)</li>
+            <li>✅ Test emails? Check Mailtrap inbox above 👆</li>
+        </ul>
+
+        <h2><span class="emoji-header">📚</span>Full Documentation & Testing</h2>
+        <div class="links">
+            <p><strong>🔍 Swagger UI:</strong> <a href="/api/docs/swagger/" target="_blank">Interactive API Testing</a><br>
+                <em>Test all endpoints directly in your browser (recommended!)</em>
+            </p>
+
+            <p><strong>📖 ReDoc:</strong> <a href="/api/docs/redoc/" target="_blank">Clean Documentation</a><br>
+                <em>Better for reading and understanding API structure</em>
+            </p>
+
+            <p><strong>📦 Schema Files:</strong><br>
+                <a href="/api/schema/?format=json" target="_blank">JSON Schema</a> |
+                <a href="/api/schema/?format=yaml" target="_blank">YAML Schema</a><br>
+                <em>For Postman import or code generation tools</em>
+            </p>
+        </div>
+
+        <div class="tip-box">
+            <strong>🎯 Quick Start for Frontend:</strong><br>
+            1. Copy Mailtrap credentials above<br>
+            2. Test user registration with a dummy email<br>
+            3. Check Mailtrap inbox for OTP<br>
+            4. Complete verification flow<br>
+            5. Celebrate! 🎉
+        </div>
+
+        <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
+            <p>Questions? Check the interactive docs first! 👆 
+               <br>Still stuck? Reach out to <strong>Rafi</strong> on 
+               <a href="https://wa.me/8801743568504" style="color: #667eea;">WhatsApp</a>
+            </p>
+            <p><em>Last Updated: December 2025 • Made with ❤️ and ☕ by Rafi - Backend Developer</em></p>
+        </footer>
     </div>
 
-    <p><strong>Base URL:</strong> <code>https://shoppassport.onrender.com</code></p>
-    <p><strong>Email Server:</strong> <code>https://synthesis-walking-templates-concord.trycloudflare.com</code></p>
-
-    <h2>🔐 Authentication Endpoints</h2>
-
-    <div class="endpoint">
-        <strong>🔑 Login:</strong> <code>POST /api/auth/login/</code><br>
-        <em>Send email & password → Get access & refresh tokens</em>
-    </div>
-
-    <div class="endpoint">
-        <strong>🔄 Refresh Token:</strong> <code>POST /api/token/refresh/</code><br>
-        <em>Send refresh token → Get new access token (no re-login needed!)</em>
-    </div>
-
-    <div class="endpoint">
-        <strong>📝 Register:</strong> <code>POST /api/auth/register/</code><br>
-        <em>Create account → Get tokens immediately</em>
-    </div>
-
-    <h2>🔄 Authentication Flow</h2>
-    <div class="auth-flow">
-        <strong>Step 1:</strong> Login with credentials → Get <code>access</code> + <code>refresh</code> tokens<br>
-        <strong>Step 2:</strong> Use <code>Authorization: Bearer &lt;access_token&gt;</code> for all API calls<br>
-        <strong>Step 3:</strong> When access token expires → Use refresh endpoint<br>
-        <strong>Step 4:</strong> Repeat Step 3 (no need to login again!) 🎉
-    </div>
-
-    <h2>📝 Standard Response Format</h2>
-    <div class="response-format">{
-        "success": true/false,
-        "message": "Human-readable message",
-        "timestamp": "2025-06-30T10:30:00Z",
-        "status_code": 200,
-        "data": {...}, // Only on success
-        "error_code": "...", // Only on errors
-        "errors": {...} // Only on validation errors
-        }</div>
-
-    <h2>⚠️ Error Codes (Use these instead of HTTP status codes)</h2>
-    <div class="error-codes">
-        <span class="error-code">VALIDATION_ERROR</span>
-        <span class="error-code">NOT_AUTHENTICATED</span>
-        <span class="error-code">AUTHENTICATION_FAILED</span>
-        <span class="error-code">PERMISSION_DENIED</span>
-        <span class="error-code">RESOURCE_NOT_FOUND</span>
-        <span class="error-code">RATE_LIMITED</span>
-        <span class="error-code">INTEGRITY_ERROR</span>
-    </div>
-
-    <h2>💡 Pro Tips</h2>
-    <ul>
-        <li>✅ Always check <code>response.success</code> first</li>
-        <li>✅ Use <code>error_code</code> for programmatic error handling</li>
-        <li>✅ Display <code>message</code> to users (it's human-friendly)</li>
-        <li>✅ Store refresh token securely for auto-refresh</li>
-        <li>✅ Use interactive docs below for testing</li>
-    </ul>
-
-    <h2>📚 Full Documentation & Testing</h2>
-    <div class="links">
-        <p><strong>🔍 Swagger UI:</strong> <a href="/api/docs/swagger/" target="_blank">Interactive API Testing</a><br>
-            <em>Test all endpoints directly in your browser</em>
-        </p>
-
-        <p><strong>📖 ReDoc:</strong> <a href="/api/docs/redoc/" target="_blank">Clean Documentation</a><br>
-            <em>Better for reading and understanding API structure</em>
-        </p>
-
-        <p><strong>📦 Schema Files:</strong><br>
-            <a href="/api/schema/?format=json" target="_blank">JSON Schema</a> |
-            <a href="/api/schema/?format=yaml" target="_blank">YAML Schema</a><br>
-            <em>For Postman import or code generation tools</em>
-        </p>
-    </div>
-
-    <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
-        <p>Questions? Check the interactive docs first! 👆</p>
-        <p><em>Updated: June 2025</em></p>
-    </footer>
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                event.target.textContent = '✅ Copied!';
+                event.target.style.background = '#27ae60';
+                setTimeout(() => {
+                    event.target.textContent = '📋 Copy';
+                    event.target.style.background = '#2196F3';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+    </script>
 </body>
 
 </html>
