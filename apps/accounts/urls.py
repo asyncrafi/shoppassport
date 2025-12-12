@@ -18,9 +18,8 @@ from .views import (
     AccountRestoreView,
     ProfileUpdateView,
     VerifyEmailChangeView,
-    ParmanentAccountDeleteView
-
-    # UserProfileGenericView,
+    ParmanentAccountDeleteView,
+    UserProfileGenericView,
 )
 
 urlpatterns = [
@@ -64,6 +63,6 @@ urlpatterns = [
     ),
     path("social-auth/", SocialAuthView.as_view(), name="social-auth"),
 
-    # path("profile/", UserProfileGenericView.as_view(), name="user-profile"),
+    path("profile/", UserProfileGenericView.as_view(), name="user-profile"),
 
 ]

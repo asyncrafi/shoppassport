@@ -552,3 +552,21 @@ class SocialAuthSerializer(serializers.Serializer):
             user.profile.save()
 
         return user
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.ImageField(required=False)
+    email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'email', 'name', 'phone', 
+            'bio', 'profile_picture', 'profile_completed'
+        ]
+        
+    def validate_date_of_birth(self, value):
+        from datetime import date
+        if value and value > date.today():
+            raise serializers.ValidationError("Date of birth cannot be in the future.")
+        return value

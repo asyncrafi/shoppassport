@@ -26,7 +26,7 @@ from apps.accounts.serializers import (
     ProfileUpdateSerializer,
     VerifyEmailChangeSerializer,
     ParmanentAccountDeleteSerializer,
-    # UserProfileSerializer ,
+    UserProfileSerializer ,
 )
 from rest_framework.generics import RetrieveUpdateAPIView
 from django.conf import settings
@@ -539,3 +539,57 @@ class SocialAuthView(BaseResponseMixin, generics.GenericAPIView):
             message="Login successful",
             status_code=status.HTTP_200_OK,
         )
+    
+
+class UserProfileGenericView(BaseResponseMixin, RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def get_object(self):
+        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
+    
+    def get(self, request, *args, **kwargs):
+        profile = self.get_object()
+        serializer = self.get_serializer(profile)
+        
+        return self.success_response(
+            data=serializer.data,
+            message="Profile retrieved successfully"
+        )
+    
+    def put(self, request, *args, **kwargs):
+        profile = self.get_object()
+        serializer = self.get_serializer(profile, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            
+            # Send notification when profile is updated
+            # NotificationService.send_notification(
+            #     user_id=request.user.id,
+            #     title="Profile Updated",
+            #     message="Your profile was updated.",
+            #     notification_types=['push'],
+            #     data={"action": "profile_update"}
+            # )
+            
+            return self.success_response(
+                data=serializer.data,
+                message='Profile updated successfully'
+            )
+        
+        errors = serializer.errors
+        if 'gender' in errors:
+            valid_genders = [choice[0] for choice in UserProfile.GENDER_CHOICES]
+            errors['gender_choices'] = valid_genders
+        
+        return self.error_response(
+            message="Validation failed",
+            errors=errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
+    def post(self, request, *args, **kwargs):
+        return self.put(request, *args, **kwargs)
