@@ -8,6 +8,7 @@ charset-normalizer==3.4.4
 click==8.3.1
 colorama==0.4.6
 cryptography==46.0.3
+dj-database-url==3.0.1
 dj-rest-auth==7.0.1
 Django==5.2.8
 django-allauth==65.13.1
