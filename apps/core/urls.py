@@ -1,8 +1,6 @@
 from django.urls import path, include
 from .views import *
 
-
-
 urlpatterns = [
 
     path("guide/", APIGuideView.as_view(), name="api-guide;"),
