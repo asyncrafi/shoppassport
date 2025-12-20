@@ -1,8 +1,6 @@
 from django.urls import path
 from . import views
 
-app_name = 'shopowner'
-
 urlpatterns = [
     # Participation Request URLs
     path('participation-requests/create/', views.ParticipantRequestCreateView.as_view(), name='participation-create'),

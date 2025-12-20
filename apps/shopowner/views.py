@@ -1,3 +1,168 @@
-from django.shortcuts import render
+"""
+Shop Owner Views - Participation Request Management
+File: apps/shopowner/views.py
+"""
 
-# Create your views here.
+from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+
+from apps.core.utils.mixins import BaseResponseMixin
+from apps.shopadmin.models import EventShopParticipant, EventShop
+from apps.shopadmin.serializers import ParticipantListSerializer, ParticipantCreateSerializer
+
+
+class ParticipantRequestCreateView(BaseResponseMixin, APIView):
+    """
+    POST /api/shopowner/participation-requests/create/
+    Shop owner creates participation request to join event
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            serializer = ParticipantCreateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            participant = serializer.save()
+            
+            response_serializer = ParticipantListSerializer(participant)
+            return self.created_response(
+                data=response_serializer.data,
+                message="Participation request created successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyParticipationListView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-participations/
+    List all participation requests for current shop owner
+    Query Params: ?shop_id=<id>, ?status=pending|accepted|rejected
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get shop_id from query params or user's shops
+            shop_id = request.query_params.get('shop_id')
+            
+            if shop_id:
+                queryset = EventShopParticipant.objects.filter(
+                    event_shop__shop_id=shop_id
+                )
+            else:
+                # Get all participations for shops owned by current user
+                queryset = EventShopParticipant.objects.filter(
+                    event_shop__shop__shop_owner=request.user
+                )
+            
+            # Filter by status
+            status_filter = request.query_params.get('status')
+            if status_filter == 'accepted':
+                queryset = queryset.filter(accepted=True)
+            elif status_filter == 'rejected':
+                queryset = queryset.filter(rejected=True)
+            elif status_filter == 'pending':
+                queryset = queryset.filter(accepted=False, rejected=False)
+            
+            queryset = queryset.order_by('-created_at')
+            serializer = ParticipantListSerializer(queryset, many=True)
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Participations retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyParticipationDetailView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-participations/<int:pk>/
+    Get details of a specific participation request
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, pk):
+        try:
+            participant = get_object_or_404(
+                EventShopParticipant,
+                pk=pk,
+                event_shop__shop__shop_owner=request.user
+            )
+            serializer = ParticipantListSerializer(participant)
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Participation retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyParticipationDeleteView(BaseResponseMixin, APIView):
+    """
+    DELETE /api/shopowner/my-participations/<int:pk>/cancel/
+    Cancel/delete participation request
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, pk):
+        try:
+            participant = get_object_or_404(
+                EventShopParticipant,
+                pk=pk,
+                event_shop__shop__shop_owner=request.user
+            )
+            participant.delete()
+            
+            return self.deleted_response(
+                message="Participation request cancelled successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyShopEventsView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-shop-events/
+    List all events my shops are participating in
+    Query Params: ?event_status=upcoming|ongoing|completed
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            from apps.shopadmin.serializers import EventShopListSerializer
+            
+            # Get all event-shops for shops owned by current user
+            queryset = EventShop.objects.filter(
+                shop__shop_owner=request.user
+            )
+            
+            # Filter by event status
+            event_status = request.query_params.get('event_status')
+            if event_status:
+                from datetime import date
+                today = date.today()
+                
+                if event_status == 'upcoming':
+                    queryset = queryset.filter(event__from_date__gt=today)
+                elif event_status == 'ongoing':
+                    queryset = queryset.filter(
+                        event__from_date__lte=today,
+                        event__to_date__gte=today
+                    )
+                elif event_status == 'completed':
+                    queryset = queryset.filter(event__to_date__lt=today)
+            
+            queryset = queryset.order_by('-event__from_date')
+            serializer = EventShopListSerializer(queryset, many=True)
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Shop events retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
