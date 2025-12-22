@@ -73,6 +73,20 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+    
+    @property
+    def role(self):
+        """Return the user's primary role"""
+        if self.is_staff or self.is_superuser:
+            return "superadmin"
+        elif self.event_admin:
+            return "event_admin"
+        elif self.shop_admin:
+            return "shop_admin"
+        elif self.shopper:
+            return "shopper"
+        else:
+            return "user"
 
     def soft_delete(self):
         """Mark the user as deleted."""

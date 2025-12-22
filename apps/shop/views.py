@@ -1,12 +1,8 @@
-"""
-Shop Views - Shop CRUD Operations
-File: apps/shop/views.py
-"""
-
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from apps.core.utils.mixins import BaseResponseMixin
 from .models import Shop
@@ -42,7 +38,11 @@ class ShopListView(BaseResponseMixin, APIView):
                 )
             
             queryset = queryset.order_by('-created_at')
-            serializer = ShopListSerializer(queryset, many=True)
+            serializer = ShopListSerializer(
+                queryset, 
+                many=True, 
+                context={'request': request}
+            )
             
             return self.success_response(
                 data=serializer.data,
@@ -55,17 +55,24 @@ class ShopListView(BaseResponseMixin, APIView):
 class ShopCreateView(BaseResponseMixin, APIView):
     """
     POST /api/shops/create/
-    Create new shop
+    Create new shop with multiple cover images
     """
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
     
     def post(self, request):
         try:
-            serializer = ShopCreateUpdateSerializer(data=request.data)
+            serializer = ShopCreateUpdateSerializer(
+                data=request.data,
+                context={'request': request}
+            )
             serializer.is_valid(raise_exception=True)
             shop = serializer.save()
             
-            response_serializer = ShopDetailSerializer(shop)
+            response_serializer = ShopDetailSerializer(
+                shop,
+                context={'request': request}
+            )
             return self.created_response(
                 data=response_serializer.data,
                 message="Shop created successfully"
@@ -84,7 +91,10 @@ class ShopDetailView(BaseResponseMixin, APIView):
     def get(self, request, pk):
         try:
             shop = get_object_or_404(Shop, pk=pk)
-            serializer = ShopDetailSerializer(shop)
+            serializer = ShopDetailSerializer(
+                shop,
+                context={'request': request}
+            )
             
             return self.success_response(
                 data=serializer.data,
@@ -97,18 +107,27 @@ class ShopDetailView(BaseResponseMixin, APIView):
 class ShopUpdateView(BaseResponseMixin, APIView):
     """
     PUT/PATCH /api/shops/<int:pk>/update/
-    Update existing shop
+    Update existing shop with multiple cover images
     """
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
     
     def put(self, request, pk):
         try:
             shop = get_object_or_404(Shop, pk=pk)
-            serializer = ShopCreateUpdateSerializer(shop, data=request.data, partial=True)
+            serializer = ShopCreateUpdateSerializer(
+                shop, 
+                data=request.data, 
+                partial=True,
+                context={'request': request}
+            )
             serializer.is_valid(raise_exception=True)
             shop = serializer.save()
             
-            response_serializer = ShopDetailSerializer(shop)
+            response_serializer = ShopDetailSerializer(
+                shop,
+                context={'request': request}
+            )
             return self.updated_response(
                 data=response_serializer.data,
                 message="Shop updated successfully"
@@ -149,11 +168,15 @@ class ShopEventsListView(BaseResponseMixin, APIView):
         try:
             # Import here to avoid circular import
             from apps.shopadmin.models import EventShop
-            from apps.shopadmin.serializers import EventShopListSerializer
+            from apps.shop.serializers import EventShopListSerializer
             
             shop = get_object_or_404(Shop, pk=shop_pk)
             event_shops = shop.event_shops.all()
-            serializer = EventShopListSerializer(event_shops, many=True)
+            serializer = EventShopListSerializer(
+                event_shops, 
+                many=True,
+                context={'request': request}
+            )
             
             return self.success_response(
                 data=serializer.data,

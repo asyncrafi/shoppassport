@@ -9,11 +9,6 @@ urlpatterns = [
     path('events/<int:pk>/update/', views.EventUpdateView.as_view(), name='event-update'),
     path('events/<int:pk>/delete/', views.EventDeleteView.as_view(), name='event-delete'),
     
-    # Event Shops URLs
-    path('events/<int:event_pk>/shops/', views.EventShopsListView.as_view(), name='event-shops-list'),
-    path('event-shops/create/', views.EventShopCreateView.as_view(), name='event-shop-create'),
-    path('event-shops/<int:pk>/delete/', views.EventShopDeleteView.as_view(), name='event-shop-delete'),
-    
     # Participant URLs
     path('participants/', views.ParticipantListView.as_view(), name='participant-list'),
     path('participants/<int:pk>/', views.ParticipantDetailView.as_view(), name='participant-detail'),

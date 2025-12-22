@@ -8,8 +8,66 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
 from apps.core.utils.mixins import BaseResponseMixin
-from apps.shopadmin.models import EventShopParticipant, EventShop
+from apps.shopadmin.models import EventShopParticipant, EventShop, Event
 from apps.shopadmin.serializers import ParticipantListSerializer, ParticipantCreateSerializer
+from apps.shop.models import Shop
+from apps.shop.serializers import EventShopListSerializer, EventShopCreateSerializer
+
+
+
+
+# ==================== EVENT SHOP MANAGEMENT ====================
+
+class EventShopsListView(BaseResponseMixin, APIView):
+    """List all shops in an event"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, event_pk):
+        try:
+            event = get_object_or_404(Event, pk=event_pk)
+            event_shops = event.event_shops.all()
+            serializer = EventShopListSerializer(event_shops, many=True, context={'request': request})
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Event shops retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class EventShopCreateView(BaseResponseMixin, APIView):
+    """Add shop to event"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            serializer = EventShopCreateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            event_shop = serializer.save()
+            
+            response_serializer = EventShopListSerializer(event_shop)
+            return self.created_response(
+                data=response_serializer.data,
+                message="Shop added to event successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class EventShopDeleteView(BaseResponseMixin, APIView):
+    """Remove shop from event"""
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, pk):
+        try:
+            event_shop = get_object_or_404(EventShop, pk=pk)
+            event_shop.delete()
+            
+            return self.deleted_response(message="Shop removed from event successfully")
+        except Exception as exc:
+            return self.handle_exception(exc)
+
 
 
 class ParticipantRequestCreateView(BaseResponseMixin, APIView):

@@ -13,11 +13,11 @@ from apps.core.utils.mixins import BaseResponseMixin
 from .models import Event, EventShop, EventShopParticipant, EventPassport
 from .serializers import (
     EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer,
-    EventShopListSerializer, EventShopCreateSerializer,
     ParticipantListSerializer, ParticipantUpdateSerializer,
     PassportListSerializer, PassportDetailSerializer, PassportCreateSerializer
 )
 
+from rest_framework.parsers import MultiPartParser, FormParser
 
 # ==================== EVENT VIEWS ====================
 
@@ -50,7 +50,7 @@ class EventListView(BaseResponseMixin, APIView):
                 )
             
             queryset = queryset.order_by('-created_at')
-            serializer = EventListSerializer(queryset, many=True)
+            serializer = EventListSerializer(queryset, many=True, context={'request': request})
             
             return self.success_response(
                 data=serializer.data,
@@ -78,23 +78,30 @@ class EventDetailView(BaseResponseMixin, APIView):
 
 
 class EventCreateView(BaseResponseMixin, APIView):
-    """Create new event"""
+    """Create new event with multiple images"""
     permission_classes = [IsAuthenticated]
-    
+    parser_classes = (MultiPartParser, FormParser)
+
     def post(self, request):
         try:
-            serializer = EventCreateUpdateSerializer(data=request.data)
+            serializer = EventCreateUpdateSerializer(
+                data=request.data,
+                context={'request': request}
+            )
             serializer.is_valid(raise_exception=True)
             event = serializer.save()
-            
-            response_serializer = EventDetailSerializer(event)
+
+            response_serializer = EventDetailSerializer(
+                event,
+                context={'request': request}
+            )
             return self.created_response(
                 data=response_serializer.data,
                 message="Event created successfully"
             )
         except Exception as exc:
             return self.handle_exception(exc)
-
+        
 
 class EventUpdateView(BaseResponseMixin, APIView):
     """Update existing event"""
@@ -131,60 +138,6 @@ class EventDeleteView(BaseResponseMixin, APIView):
             return self.deleted_response(message="Event deleted successfully")
         except Exception as exc:
             return self.handle_exception(exc)
-
-
-# ==================== EVENT SHOP MANAGEMENT ====================
-
-class EventShopsListView(BaseResponseMixin, APIView):
-    """List all shops in an event"""
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request, event_pk):
-        try:
-            event = get_object_or_404(Event, pk=event_pk)
-            event_shops = event.event_shops.all()
-            serializer = EventShopListSerializer(event_shops, many=True)
-            
-            return self.success_response(
-                data=serializer.data,
-                message="Event shops retrieved successfully"
-            )
-        except Exception as exc:
-            return self.handle_exception(exc)
-
-
-class EventShopCreateView(BaseResponseMixin, APIView):
-    """Add shop to event"""
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request):
-        try:
-            serializer = EventShopCreateSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            event_shop = serializer.save()
-            
-            response_serializer = EventShopListSerializer(event_shop)
-            return self.created_response(
-                data=response_serializer.data,
-                message="Shop added to event successfully"
-            )
-        except Exception as exc:
-            return self.handle_exception(exc)
-
-
-class EventShopDeleteView(BaseResponseMixin, APIView):
-    """Remove shop from event"""
-    permission_classes = [IsAuthenticated]
-    
-    def delete(self, request, pk):
-        try:
-            event_shop = get_object_or_404(EventShop, pk=pk)
-            event_shop.delete()
-            
-            return self.deleted_response(message="Shop removed from event successfully")
-        except Exception as exc:
-            return self.handle_exception(exc)
-
 
 # ==================== PARTICIPANT MANAGEMENT ====================
 

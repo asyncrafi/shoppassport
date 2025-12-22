@@ -15,16 +15,38 @@ class Event(models.Model):
     contact_person_name = models.CharField(max_length=255, blank=True, null=True)
     image = models.ImageField(upload_to="shopadmin/event_images/", blank=True, null=True)
 
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name if self.name else "Unnamed Event"
     
-    class Meta:
+    class Meta: 
         verbose_name = "Create Event"
         verbose_name_plural = "Create Events"
+        
+class EventImage(models.Model):
+    event = models.ForeignKey(Event, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='shopadmin/event_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Image for {self.event.name} uploaded at {self.uploaded_at}"
 
+    class Meta:
+        ordering = ['uploaded_at']
 
 class EventShop(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='event_shops', blank=True, null=True)

@@ -88,3 +88,6 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
                     'to_date': 'End date must be after start date'
                 })
         return data
+
+
+# ==================== EVENT SHOP SERIALIZERS ====================

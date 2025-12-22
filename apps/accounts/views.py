@@ -259,6 +259,7 @@ class LoginView(BaseResponseMixin, generics.GenericAPIView):
                     "user": {
                         "id": user.id,
                         "email": user.email,
+                        "role": user.role,
                     }
                 },
                 message="Login successful"

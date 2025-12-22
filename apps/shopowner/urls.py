@@ -2,6 +2,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+
+    # Event Shops URLs
+    path('events/<int:event_pk>/shops/', views.EventShopsListView.as_view(), name='event-shops-list'),
+    path('event-shops/create/', views.EventShopCreateView.as_view(), name='event-shop-create'),
+    path('event-shops/<int:pk>/delete/', views.EventShopDeleteView.as_view(), name='event-shop-delete'),
+    
     # Participation Request URLs
     path('participation-requests/create/', views.ParticipantRequestCreateView.as_view(), name='participation-create'),
     path('my-participations/', views.MyParticipationListView.as_view(), name='my-participations-list'),
