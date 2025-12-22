@@ -49,28 +49,37 @@ class EventImage(models.Model):
         ordering = ['uploaded_at']
 
 class EventShop(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+    
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='event_shops', blank=True, null=True)
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='event_shops', blank=True, null=True)
-
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.event.name} - {self.shop.shop_name}"
-    
-    class Meta:
-        verbose_name = "Event Shop"
-        verbose_name_plural = "Event Shops"
-
+        return f"{self.event.name} - {self.shop.shop_name} ({self.status})"
 
 class EventShopParticipant(models.Model):
     event_shop = models.ForeignKey(EventShop, on_delete=models.CASCADE, related_name='participants', blank=True, null=True)
+    shopper = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_participations', blank=True, null=True)
     participant_name = models.CharField(max_length=255, blank=True, null=True)
     participant_email = models.EmailField(max_length=255, blank=True, null=True)
     participant_phone = models.CharField(max_length=20, blank=True, null=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
-    accepted = models.BooleanField(default=False)
-    rejected = models.BooleanField(default=False)
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -92,6 +101,10 @@ class EventPassport(models.Model):
     description = models.TextField(blank=True, null=True)
     valid_from = models.DateField(blank=True, null=True)
     valid_to = models.DateField(blank=True, null=True)
+    
+    # Track if shop has been visited
+    is_visited = models.BooleanField(default=False)
+    total_visits = models.IntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -104,15 +117,22 @@ class EventPassport(models.Model):
         verbose_name_plural = "Shop Passports"
 
 class ShopperCheckIn(models.Model):
+    STATUS_CHOICES = [
+        ('stamped', 'Stamped'),
+        ('visited', 'Visited'),
+    ]
+    
     event_passport = models.ForeignKey(EventPassport, on_delete=models.CASCADE, related_name='check_ins', blank=True, null=True)
     shopper = models.ForeignKey(User, on_delete=models.CASCADE, related_name='check_ins', blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stamped')
     check_in_time = models.DateTimeField(auto_now_add=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.shopper.user.name} - {self.event_passport.passport_id}"
+        shopper_name = self.shopper.get_full_name() or self.shopper.username
+        return f"{shopper_name} - {self.event_passport.passport_id} ({self.status})"
     
     class Meta:
         verbose_name = "Shopper Check-In"

@@ -137,24 +137,15 @@ class ParticipantListSerializer(serializers.ModelSerializer):
     """List participants with basic info"""
     event_name = serializers.CharField(source='event_shop.event.name', read_only=True)
     shop_name = serializers.CharField(source='event_shop.shop.shop_name', read_only=True)
-    status = serializers.SerializerMethodField()
     
     class Meta:
         model = EventShopParticipant
         fields = [
-            'id', 'event_shop', 'participant_name', 'participant_email',
+            'id', 'event_shop', 'shopper', 'participant_name', 'participant_email',
             'participant_phone', 'contact_number', 'event_name', 'shop_name',
-            'accepted', 'rejected', 'status', 'created_at'
+            'status', 'created_at'
         ]
-        read_only_fields = ['id', 'created_at']
-    
-    def get_status(self, obj):
-        if obj.accepted:
-            return 'accepted'
-        elif obj.rejected:
-            return 'rejected'
-        else:
-            return 'pending'
+        read_only_fields = ['id', 'created_at', 'status']
 
 
 class ParticipantCreateSerializer(serializers.ModelSerializer):
@@ -171,20 +162,23 @@ class ParticipantCreateSerializer(serializers.ModelSerializer):
         if value and '@' not in value:
             raise serializers.ValidationError("Invalid email format")
         return value
-
+    
+    def create(self, validated_data):
+        # Get the user from context (passed from the view)
+        user = self.context.get('request').user
+        validated_data['shopper'] = user
+        # Ensure request starts as pending
+        validated_data.setdefault('status', 'pending')
+        return super().create(validated_data)
+    
 
 class ParticipantUpdateSerializer(serializers.ModelSerializer):
     """Update participant status"""
     
     class Meta:
         model = EventShopParticipant
-        fields = ['accepted', 'rejected']
-    
-    def validate(self, data):
-        if data.get('accepted') and data.get('rejected'):
-            raise serializers.ValidationError('Cannot accept and reject simultaneously')
-        return data
-
+        fields = ['shopper', 'participant_name', 'participant_email', 'participant_phone', 'contact_number']
+ 
 
 
 class PassportListSerializer(serializers.ModelSerializer):
@@ -198,7 +192,7 @@ class PassportListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'event', 'shop', 'passport_id', 'shop_qr_code',
             'event_name', 'shop_name', 'valid_from', 'valid_to',
-            'total_check_ins', 'created_at'
+            'is_visited', 'total_visits', 'total_check_ins', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
     
@@ -221,7 +215,7 @@ class PassportDetailSerializer(serializers.ModelSerializer):
             'id', 'event', 'shop', 'passport_id', 'shop_qr_code',
             'description', 'valid_from', 'valid_to', 'event_name',
             'event_location', 'shop_name', 'shop_location', 'shop_logo',
-            'total_check_ins', 'created_at', 'updated_at'
+            'is_visited', 'total_visits', 'total_check_ins', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
@@ -267,9 +261,9 @@ class CheckInListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'event_passport', 'shopper', 'shopper_name',
             'shopper_email', 'event_name', 'shop_name', 'passport_id',
-            'check_in_time', 'created_at'
+            'status', 'check_in_time', 'created_at'
         ]
-        read_only_fields = ['id', 'check_in_time', 'created_at']
+        read_only_fields = ['id', 'check_in_time', 'created_at', 'status']
 
 
 class CheckInDetailSerializer(serializers.ModelSerializer):
@@ -282,10 +276,10 @@ class CheckInDetailSerializer(serializers.ModelSerializer):
         model = ShopperCheckIn
         fields = [
             'id', 'event_passport', 'shopper', 'shopper_name',
-            'shopper_email', 'event_passport_details',
+            'shopper_email', 'event_passport_details', 'status',
             'check_in_time', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'check_in_time', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'check_in_time', 'created_at', 'updated_at', 'status']
 
 
 class CheckInCreateSerializer(serializers.ModelSerializer):

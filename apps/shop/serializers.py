@@ -128,9 +128,9 @@ class EventShopListSerializer(serializers.ModelSerializer):
         model = EventShop
         fields = [
             'id', 'event', 'shop', 'event_name', 'shop_name',
-            'shop_location', 'shop_logo', 'total_participants', 'created_at'
+            'shop_location', 'shop_logo', 'total_participants', 'status', 'created_at'
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'status', 'created_at']
     
     def get_total_participants(self, obj):
         return obj.participants.count()

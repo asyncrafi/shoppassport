@@ -6,9 +6,11 @@ Clean class-based views without ViewSets
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import status as rest_status
+from rest_framework.response import Response
 
 from apps.core.utils.mixins import BaseResponseMixin
-from apps.shopadmin.models import EventPassport, ShopperCheckIn
+from apps.shopadmin.models import EventPassport, ShopperCheckIn, Event
 from apps.shopadmin.serializers import (
     PassportListSerializer, PassportDetailSerializer,
     CheckInListSerializer, CheckInDetailSerializer, CheckInCreateSerializer
@@ -102,6 +104,20 @@ class CheckInCreateView(BaseResponseMixin, APIView):
             serializer = CheckInCreateSerializer(data=data)
             serializer.is_valid(raise_exception=True)
             check_in = serializer.save()
+            
+            # Mark passport as visited
+            passport = check_in.event_passport
+            passport.is_visited = True
+            passport.total_visits = passport.check_ins.count()
+            passport.save()
+            
+            response_serializer = CheckInDetailSerializer(check_in)
+            return self.created_response(
+                data=response_serializer.data,
+                message="Check-in successful"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
             
             response_serializer = CheckInDetailSerializer(check_in)
             return self.created_response(
@@ -258,3 +274,188 @@ class PublicEventPassportsView(BaseResponseMixin, APIView):
             )
         except Exception as exc:
             return self.handle_exception(exc)
+
+
+# ==================== SHOPPER EVENT BROWSING ====================
+
+class EventListView(BaseResponseMixin, APIView):
+    """List all upcoming and ongoing events"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            from datetime import date
+            today = date.today()
+            
+            # Get status filter
+            event_status = request.query_params.get('status')  # upcoming, ongoing, completed
+            
+            queryset = Event.objects.all()
+            
+            if event_status == 'upcoming':
+                queryset = queryset.filter(from_date__gt=today)
+            elif event_status == 'ongoing':
+                queryset = queryset.filter(from_date__lte=today, to_date__gte=today)
+            elif event_status == 'completed':
+                queryset = queryset.filter(to_date__lt=today)
+            
+            # Search by name
+            search = request.query_params.get('search')
+            if search:
+                queryset = queryset.filter(name__icontains=search)
+            
+            queryset = queryset.order_by('-from_date')
+            
+            # Return only basic event info with passport count
+            data = []
+            for event in queryset:
+                passport_count = event.passports.count()
+                data.append({
+                    'id': event.id,
+                    'name': event.name,
+                    'location': event.location,
+                    'from_date': event.from_date,
+                    'to_date': event.to_date,
+                    'total_shops': passport_count,
+                    'status': 'upcoming' if event.from_date > today else ('ongoing' if event.to_date >= today else 'completed')
+                })
+            
+            return self.success_response(
+                data=data,
+                message="Events retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class EventShopsView(BaseResponseMixin, APIView):
+    """List all shops (passports) in an event with visit status"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, event_id):
+        try:
+            event = get_object_or_404(Event, pk=event_id)
+            
+            # Get all passports for this event
+            passports = EventPassport.objects.filter(event=event).order_by('shop__shop_name')
+            print(event, "event found 🍒🍒🍒🍒")
+            print(passports, "passports found 🍒🍒🍒🍒")
+            
+            # Check which shops current shopper has visited
+            visited_shop_ids = ShopperCheckIn.objects.filter(
+                shopper=request.user,
+                event_passport__event=event
+            ).values_list('event_passport__shop_id', flat=True).distinct()
+            
+            data = []
+            for passport in passports:
+                check_in_count = passport.check_ins.count()
+                data.append({
+                    'passport_id': passport.id,
+                    'passport_qr_id': passport.passport_id,
+                    'shop_id': passport.shop.id,
+                    'shop_name': passport.shop.shop_name,
+                    'shop_location': passport.shop.shop_location,
+                    'shop_logo': request.build_absolute_uri(passport.shop.shop_logo.url) if passport.shop.shop_logo else None,
+                    'qr_code_url': request.build_absolute_uri(passport.shop_qr_code.url) if passport.shop_qr_code else None,
+                    'is_visited': passport.shop.id in visited_shop_ids,
+                    'total_visits': check_in_count,
+                    'valid_from': passport.valid_from,
+                    'valid_to': passport.valid_to
+                })
+            
+            return self.success_response(
+                data=data,
+                message="Event shops retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class ShopVisitDetailsView(BaseResponseMixin, APIView):
+    """Get detailed visit info for a shop (who visited, when, etc)"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, event_id, shop_id):
+        try:
+            # Get all check-ins for this shop in this event
+            check_ins = ShopperCheckIn.objects.filter(
+                event_passport__event_id=event_id,
+                event_passport__shop_id=shop_id
+            ).order_by('-check_in_time')
+            
+            # Get passport details
+            passport = get_object_or_404(
+                EventPassport,
+                event_id=event_id,
+                shop_id=shop_id
+            )
+            
+            # Build visit details
+            visits = []
+            for check_in in check_ins:
+                visits.append({
+                    'id': check_in.id,
+                    'shopper_name': check_in.shopper.get_full_name(),
+                    'shopper_email': check_in.shopper.email,
+                    'check_in_time': check_in.check_in_time,
+                    'status': 'stamped'  # Assuming all check-ins are stamped
+                })
+            
+            data = {
+                'passport_id': passport.passport_id,
+                'shop_name': passport.shop.shop_name,
+                'shop_location': passport.shop.shop_location,
+                'event_name': passport.event.name,
+                'total_visits': len(visits),
+                'visits': visits
+            }
+            
+            return self.success_response(
+                data=data,
+                message="Visit details retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+# ==================== QR CODE DOWNLOAD ====================
+
+class DownloadQRCodeView(APIView):
+    """Download QR code for a passport (for shop owner)"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, passport_id):
+        try:
+            passport = get_object_or_404(EventPassport, pk=passport_id)
+            
+            # Check if user is shop owner
+            if passport.shop.shop_owner != request.user:
+                return Response(
+                    {"success": False, "message": "Not authorized"},
+                    status=rest_status.HTTP_403_FORBIDDEN
+                )
+            
+            if not passport.shop_qr_code:
+                return Response(
+                    {"success": False, "message": "QR code not available"},
+                    status=rest_status.HTTP_404_NOT_FOUND
+                )
+            
+            # Return QR code file
+            return Response({
+                "success": True,
+                "data": {
+                    "qr_code_url": request.build_absolute_uri(passport.shop_qr_code.url),
+                    "passport_id": passport.passport_id,
+                    "shop_name": passport.shop.shop_name,
+                    "event_name": passport.event.name
+                },
+                "message": "QR code retrieved successfully"
+            })
+            
+        except Exception as exc:
+            return Response(
+                {"success": False, "message": str(exc)},
+                status=rest_status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

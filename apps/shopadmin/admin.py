@@ -105,18 +105,14 @@ class EventShopAdmin(admin.ModelAdmin):
 
 @admin.register(EventShopParticipant)
 class EventShopParticipantAdmin(admin.ModelAdmin):
-    list_display = ['participant_name', 'event_shop', 'participant_email', 'participant_phone', 'accepted', 'rejected', 'created_at']
-    list_filter = ['accepted', 'rejected', 'created_at']
+    list_display = ['shopper', 'participant_name', 'event_shop', 'participant_email', 'participant_phone', 'created_at']
+    list_filter = ['created_at']
     search_fields = ['participant_name', 'participant_email', 'event_shop__event__name', 'event_shop__shop__shop_name']
     readonly_fields = ['created_at', 'updated_at']
-    list_editable = ['accepted', 'rejected']
     
     fieldsets = [
         ('Participant Information', {
-            'fields': ['event_shop', 'participant_name', 'participant_email', 'participant_phone', 'contact_number']
-        }),
-        ('Status', {
-            'fields': ['accepted', 'rejected']
+            'fields': ['event_shop', 'shopper', 'participant_name', 'participant_email', 'participant_phone', 'contact_number']
         }),
         ('Timestamps', {
             'fields': ['created_at', 'updated_at'],

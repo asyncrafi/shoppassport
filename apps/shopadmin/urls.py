@@ -12,9 +12,11 @@ urlpatterns = [
     # Participant URLs
     path('participants/', views.ParticipantListView.as_view(), name='participant-list'),
     path('participants/<int:pk>/', views.ParticipantDetailView.as_view(), name='participant-detail'),
-    path('participants/<int:pk>/accept/', views.ParticipantAcceptView.as_view(), name='participant-accept'),
-    path('participants/<int:pk>/reject/', views.ParticipantRejectView.as_view(), name='participant-reject'),
     path('participants/<int:pk>/delete/', views.ParticipantDeleteView.as_view(), name='participant-delete'),
+    # Participant request approval (event admin)
+    path('events/<int:event_pk>/participant-requests/', views.ParticipantRequestsListView.as_view(), name='participant-requests-list'),
+    path('participant-requests/<int:pk>/approve/', views.ParticipantApproveView.as_view(), name='participant-request-approve'),
+    path('participant-requests/<int:pk>/reject/', views.ParticipantRejectView.as_view(), name='participant-request-reject'),
     
     # Passport URLs
     path('passports/', views.PassportListView.as_view(), name='passport-list'),

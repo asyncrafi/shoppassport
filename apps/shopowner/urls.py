@@ -6,6 +6,9 @@ urlpatterns = [
     # Event Shops URLs
     path('events/<int:event_pk>/shops/', views.EventShopsListView.as_view(), name='event-shops-list'),
     path('event-shops/create/', views.EventShopCreateView.as_view(), name='event-shop-create'),
+    path('events/<int:event_pk>/shop-requests/', views.ShopRequestListView.as_view(), name='shop-requests-list'),
+    path('shop-requests/<int:pk>/approve/', views.ShopRequestApproveView.as_view(), name='shop-request-approve'),
+    path('shop-requests/<int:pk>/reject/', views.ShopRequestRejectView.as_view(), name='shop-request-reject'),
     path('event-shops/<int:pk>/delete/', views.EventShopDeleteView.as_view(), name='event-shop-delete'),
     
     # Participation Request URLs

@@ -159,19 +159,11 @@ class ParticipantListView(BaseResponseMixin, APIView):
             if event:
                 queryset = queryset.filter(event_shop__event_id=event)
             
-            # Filter by status
-            accepted = request.query_params.get('accepted')
-            if accepted is not None:
-                queryset = queryset.filter(accepted=accepted.lower() == 'true')
-            
+
             rejected = request.query_params.get('rejected')
             if rejected is not None:
                 queryset = queryset.filter(rejected=rejected.lower() == 'true')
-            
-            # Filter pending
-            pending = request.query_params.get('pending')
-            if pending and pending.lower() == 'true':
-                queryset = queryset.filter(accepted=False, rejected=False)
+        
             
             queryset = queryset.order_by('-created_at')
             serializer = ParticipantListSerializer(queryset, many=True)
@@ -201,46 +193,6 @@ class ParticipantDetailView(BaseResponseMixin, APIView):
             return self.handle_exception(exc)
 
 
-class ParticipantAcceptView(BaseResponseMixin, APIView):
-    """Accept participant request"""
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request, pk):
-        try:
-            participant = get_object_or_404(EventShopParticipant, pk=pk)
-            participant.accepted = True
-            participant.rejected = False
-            participant.save()
-            
-            serializer = ParticipantListSerializer(participant)
-            return self.updated_response(
-                data=serializer.data,
-                message="Participant accepted successfully"
-            )
-        except Exception as exc:
-            return self.handle_exception(exc)
-
-
-class ParticipantRejectView(BaseResponseMixin, APIView):
-    """Reject participant request"""
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request, pk):
-        try:
-            participant = get_object_or_404(EventShopParticipant, pk=pk)
-            participant.rejected = True
-            participant.accepted = False
-            participant.save()
-            
-            serializer = ParticipantListSerializer(participant)
-            return self.updated_response(
-                data=serializer.data,
-                message="Participant rejected successfully"
-            )
-        except Exception as exc:
-            return self.handle_exception(exc)
-
-
 class ParticipantDeleteView(BaseResponseMixin, APIView):
     """Delete participant"""
     permission_classes = [IsAuthenticated]
@@ -251,6 +203,77 @@ class ParticipantDeleteView(BaseResponseMixin, APIView):
             participant.delete()
             
             return self.deleted_response(message="Participant deleted successfully")
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class ParticipantRequestsListView(BaseResponseMixin, APIView):
+    """List pending participant requests for an event (admin only)"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, event_pk):
+        try:
+            event = get_object_or_404(Event, pk=event_pk)
+            # Only event admin can view requests
+            if event.shop_admin != request.user:
+                return self.error_response(message="Not authorized", status=status.HTTP_403_FORBIDDEN)
+
+            queryset = EventShopParticipant.objects.filter(
+                event_shop__event=event,
+                status='pending'
+            ).order_by('-created_at')
+
+            serializer = ParticipantListSerializer(queryset, many=True)
+            return self.success_response(
+                data=serializer.data,
+                message="Pending participant requests retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class ParticipantApproveView(BaseResponseMixin, APIView):
+    """Approve a participant request (admin only)"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            participant = get_object_or_404(EventShopParticipant, pk=pk)
+
+            # Only event admin can approve
+            if participant.event_shop.event.shop_admin != request.user:
+                return self.error_response(message="Not authorized", status=status.HTTP_403_FORBIDDEN)
+
+            participant.status = 'accepted'
+            participant.save()
+
+            serializer = ParticipantListSerializer(participant)
+            return self.success_response(
+                data=serializer.data,
+                message="Participant request approved"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class ParticipantRejectView(BaseResponseMixin, APIView):
+    """Reject a participant request (admin only)"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            participant = get_object_or_404(EventShopParticipant, pk=pk)
+
+            # Only event admin can reject
+            if participant.event_shop.event.shop_admin != request.user:
+                return self.error_response(message="Not authorized", status=status.HTTP_403_FORBIDDEN)
+
+            participant.status = 'rejected'
+            participant.save()
+
+            return self.success_response(
+                message="Participant request rejected"
+            )
         except Exception as exc:
             return self.handle_exception(exc)
 
