@@ -8,6 +8,7 @@ urlpatterns = [
     path('events/<int:pk>/', views.EventDetailView.as_view(), name='event-detail'),
     path('events/<int:pk>/update/', views.EventUpdateView.as_view(), name='event-update'),
     path('events/<int:pk>/delete/', views.EventDeleteView.as_view(), name='event-delete'),
+    path('events/my-events/', views.MyEventsListAPIView.as_view(), name='my-events-list'),
     
     # Participant URLs
     path('participants/', views.ParticipantListView.as_view(), name='participant-list'),
@@ -24,4 +25,12 @@ urlpatterns = [
     path('passports/<int:pk>/', views.PassportDetailView.as_view(), name='passport-detail'),
     path('passports/<int:pk>/update/', views.PassportUpdateView.as_view(), name='passport-update'),
     path('passports/<int:pk>/delete/', views.PassportDeleteView.as_view(), name='passport-delete'),
+]
+
+
+urlpatterns += [
+    # ===== SUPERADMIN ROUTES =====
+    path('admin/events/proposals/', views.SuperAdminEventListAPIView.as_view(), name='superadmin-event-list'),
+    path('admin/events/<int:pk>/', views.SuperAdminEventDetailAPIView.as_view(), name='superadmin-event-detail'),
+    path('admin/events/<int:pk>/approve-reject/', views.SuperAdminEventApproveRejectAPIView.as_view(), name='superadmin-approve-reject'),
 ]

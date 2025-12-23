@@ -6,15 +6,17 @@ Clean class-based views without ViewSets
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework import status, generics
+from rest_framework.response import Response
 
 from apps.core.utils.mixins import BaseResponseMixin
 from .models import Event, EventShop, EventShopParticipant, EventPassport
 from .serializers import (
     EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer,
     ParticipantListSerializer, ParticipantUpdateSerializer,
-    PassportListSerializer, PassportDetailSerializer, PassportCreateSerializer
+    PassportListSerializer, PassportDetailSerializer, PassportCreateSerializer,
+    EventApproveRejectSerializer
 )
 
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -27,7 +29,7 @@ class EventListView(BaseResponseMixin, APIView):
     
     def get(self, request):
         try:
-            queryset = Event.objects.all()
+            queryset = Event.objects.filter(status='approved')
             
             # Filter by shop_admin
             shop_admin = request.query_params.get('shop_admin')
@@ -385,3 +387,83 @@ class PassportDeleteView(BaseResponseMixin, APIView):
             return self.deleted_response(message="Passport deleted successfully")
         except Exception as exc:
             return self.handle_exception(exc)
+        
+
+class MyEventsListAPIView(generics.ListAPIView):
+
+    serializer_class = EventListSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Event.objects.filter(
+            shop_admin=self.request.user
+        ).prefetch_related('images').order_by('-created_at')
+    
+
+
+# ===== SUPERADMIN APIS =====
+
+class SuperAdminEventListAPIView(generics.ListAPIView):
+
+    serializer_class = EventListSerializer
+    permission_classes = [IsAdminUser]
+    
+    def get_queryset(self):
+        queryset = Event.objects.all().select_related('shop_admin').prefetch_related('images')
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Search
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | 
+                Q(location__icontains=search)
+            )
+        
+        return queryset.order_by('-created_at')
+
+
+class SuperAdminEventDetailAPIView(generics.RetrieveAPIView):
+
+    queryset = Event.objects.all()
+    serializer_class = EventDetailSerializer
+    permission_classes = [IsAdminUser]
+
+
+class SuperAdminEventApproveRejectAPIView(APIView):
+
+    permission_classes = [IsAdminUser]
+    
+    def post(self, request, pk):
+        try:
+            event = Event.objects.get(pk=pk)
+        except Event.DoesNotExist:
+            return Response(
+                {'error': 'Event not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = EventApproveRejectSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        action = serializer.validated_data['action']
+        
+        # Update status based on action
+        if action == 'approve':
+            event.status = 'approved'
+            message = f'Event "{event.name}" has been APPROVED!'
+        else:  # reject
+            event.status = 'rejected'
+            message = f'Event "{event.name}" has been REJECTED!'
+        
+        event.save()
+        
+        return Response({
+            'message': message,
+            'event': EventDetailSerializer(event).data
+        }, status=status.HTTP_200_OK)

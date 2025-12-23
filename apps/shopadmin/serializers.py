@@ -309,3 +309,14 @@ class CheckInCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Passport has expired')
         
         return data
+    
+
+
+class EventApproveRejectSerializer(serializers.Serializer):
+    """Superadmin approves or rejects event"""
+    action = serializers.ChoiceField(choices=['approve', 'reject'])
+    
+    def validate_action(self, value):
+        if value not in ['approve', 'reject']:
+            raise serializers.ValidationError("Action must be 'approve' or 'reject'")
+        return value
