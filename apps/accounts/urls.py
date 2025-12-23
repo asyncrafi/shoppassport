@@ -1,27 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import (
-    ShopperRegisterView,
-    ShopAdminRegisterView,
-    EventAdminRegisterView,
-    LoginView,
-    LogoutView,
-    VerifyEmailView,
-    ResendOTPView,
-    PasswordResetRequestView,
-    PasswordResetOTPVerifyView,
-    ChangePasswordView,
-    PasswordResetConfirmView,
-    SocialAuthView,
-    AccountSoftDeleteView,
-    AccountRestoreView,
-    ProfileUpdateView,
-    VerifyEmailChangeView,
-    ParmanentAccountDeleteView,
-    UserProfileGenericView,
-)
-
+from apps.accounts.views import *
 urlpatterns = [
     # Authentication endpoints
     path("shopper/register/", ShopperRegisterView.as_view(), name="shopper-register"),
@@ -54,7 +34,6 @@ urlpatterns = [
 
     path("account/delete/", AccountSoftDeleteView.as_view(), name="account-delete"),
     path("account/parmanent/delete/", ParmanentAccountDeleteView.as_view(), name="parmanent-delete"),
-    path("account/restore/", AccountRestoreView.as_view(), name="account-restore"),
     path("profile/update/", ProfileUpdateView.as_view(), name="profile-update"),
     path(
         "profile/verify-email-change/",
@@ -64,5 +43,18 @@ urlpatterns = [
     path("social-auth/", SocialAuthView.as_view(), name="social-auth"),
 
     path("profile/", UserProfileGenericView.as_view(), name="user-profile"),
+]
+
+urlpatterns += [
+
+    # User Management
+    path('admin/users/', AllUsersView.as_view(), name='all-users'),
+    path('admin/users/<int:user_id>/', UserDetailView.as_view(), name='user-detail'),
+    path('admin/users/stats/', UserStatsView.as_view(), name='user-stats'),
+    
+    # User Actions
+    path('admin/users/block/', BlockUserView.as_view(), name='block-user'),
+    path('admin/users/unblock/', UnblockUserView.as_view(), name='unblock-user'),
+    path("admin/restore/", AccountRestoreView.as_view(), name="account-restore"),
 
 ]

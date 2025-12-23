@@ -380,14 +380,91 @@ class ParmanentAccountDeleteSerializer(serializers.Serializer):
             )
         return value
 
-class AccountRestoreSerializer(serializers.Serializer):
+class UserListSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'role', 'is_active', 'is_deleted', 'is_blocked', 'created_at', 'last_login', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'social_auth_provider', 'role',
+            'event_admin', 'shop_admin', 'shopper',
+            'is_active', 'is_blocked', 'blocked_at', 'blocked_reason',
+            'is_deleted', 'deleted_at',
+            'created_at', 'updated_at', 'last_login'
+        ]
+
+class BlockUserSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    reason = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError( 
+                {"email": "User with this email does not exist."}
+            )
+        if user.is_superuser:
+            raise serializers.ValidationError("Cannot block a superuser")
+        
+        if user.is_blocked:
+            raise serializers.ValidationError({"email": "This account is already blocked."})
+        # Store the user in the serializer for later use
+        self.user = user
+        return value
+
+class UnblockUserSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
     def validate_email(self, value):
         try:
             user = User.objects.get(email=value)
         except User.DoesNotExist:
-            raise serializers.ValidationError(  # Fixed typo here
+            raise serializers.ValidationError( 
+                {"email": "User with this email does not exist."}
+            )
+        if not user.is_blocked:
+            raise serializers.ValidationError({"email": "This account is not blocked."})
+        
+        self.user = user
+        return value
+
+class DeleteUserSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist")
+        
+        if user.is_superuser:
+            raise serializers.ValidationError("Cannot delete a superuser")
+        
+        if user.is_deleted:
+            raise serializers.ValidationError("User is already deleted")
+        
+        self.user = user
+        return value
+
+class AccountRestoreSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, value):    
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError( 
                 {"email": "User with this email does not exist."}
             )
         if not user.is_deleted:

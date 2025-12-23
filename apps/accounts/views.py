@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.db.models import Q
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -10,9 +11,13 @@ from django.contrib.auth.hashers import check_password
 from dj_rest_auth.registration.views import SocialLoginView
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from apps.accounts.serializers import (
+    BlockUserSerializer,
+    UnblockUserSerializer,
     ShopperRegisterSerializer,
     ShopAdminRegisterSerializer,
     EventAdminRegisterSerializer,
+    UserListSerializer,
+    UserDetailSerializer,
     VerifyEmailSerializer,
     PasswordResetRequestSerializer,
     PasswordResetOTPVerifySerializer,
@@ -26,7 +31,8 @@ from apps.accounts.serializers import (
     ProfileUpdateSerializer,
     VerifyEmailChangeSerializer,
     ParmanentAccountDeleteSerializer,
-    UserProfileSerializer ,
+    UserProfileSerializer,
+    DeleteUserSerializer,
 )
 from rest_framework.generics import RetrieveUpdateAPIView
 from django.conf import settings
@@ -34,7 +40,7 @@ from apps.core.utils.mixins import BaseResponseMixin
 from apps.accounts.models import UserProfile  
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser
 
 class ShopperRegisterView(BaseResponseMixin, generics.CreateAPIView):
@@ -448,27 +454,7 @@ class ParmanentAccountDeleteView(BaseResponseMixin, APIView):
         return self.success_response(
             message="Account has been deleted successfully"
         )
-
-class AccountRestoreView(BaseResponseMixin, APIView):
-    permission_classes = (permissions.IsAdminUser,)
-
-    def post(self, request):
-        serializer = AccountRestoreSerializer(data=request.data)
-        if not serializer.is_valid():
-            return self.error_response(
-                message="Invalid data provided",
-                errors=serializer.errors,
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        user = serializer.user
-        user.restore()
-
-        return self.success_response(
-            data={"email": user.email},
-            message="Account restored successfully"
-        )
-
+    
 class ProfileUpdateView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProfileUpdateSerializer
@@ -594,3 +580,177 @@ class UserProfileGenericView(BaseResponseMixin, RetrieveUpdateAPIView):
     
     def post(self, request, *args, **kwargs):
         return self.put(request, *args, **kwargs)
+    
+# ============ Dashboard Views ============
+
+
+
+class AllUsersView(APIView):
+    """Get all users with filters and search"""
+    permission_classes = [IsAdminUser]
+    
+    def get(self, request):
+        # Filters
+        role = request.query_params.get('role', None)
+        is_active = request.query_params.get('is_active', None)
+        is_blocked = request.query_params.get('is_blocked', None)
+        is_deleted = request.query_params.get('is_deleted', None)
+        search = request.query_params.get('search', None)
+        
+        users = User.objects.all()
+        
+        # Role filter
+        if role:
+            if role == 'superadmin':
+                users = users.filter(Q(is_staff=True) | Q(is_superuser=True))
+            elif role == 'event_admin':
+                users = users.filter(event_admin=True)
+            elif role == 'shop_admin':
+                users = users.filter(shop_admin=True)
+            elif role == 'shopper':
+                users = users.filter(shopper=True)
+        
+        # Status filters
+        if is_active is not None:
+            users = users.filter(is_active=is_active.lower() == 'true')
+        if is_blocked is not None:
+            users = users.filter(is_blocked=is_blocked.lower() == 'true')
+        if is_deleted is not None:
+            users = users.filter(is_deleted=is_deleted.lower() == 'true')
+        
+        # Search
+        if search:
+            users = users.filter(
+                Q(email__icontains=search) |
+                Q(username__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            )
+        
+        users = users.order_by('-created_at')
+        serializer = UserListSerializer(users, many=True)
+        
+        return Response({
+            'count': users.count(),
+            'users': serializer.data
+        })
+
+
+class UserDetailView(APIView):
+    """Get single user details"""
+    permission_classes = [IsAdminUser]
+    
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            serializer = UserDetailSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+
+class BlockUserView(APIView):
+    """Block a user"""
+    permission_classes = [IsAdminUser]
+    
+    def post(self, request):
+        serializer = BlockUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = serializer.user
+        reason = serializer.validated_data.get('reason', '')
+        user.block(reason=reason)
+        
+        return Response({
+            'success': True,
+            'message': f'User {user.email} has been blocked',
+            'user': UserDetailSerializer(user).data
+        })
+
+
+
+class UnblockUserView(APIView):
+    """Unblock a user"""
+    permission_classes = [IsAdminUser]
+    
+    def post(self, request):
+        serializer = UnblockUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = serializer.user
+        user.unblock()
+        
+        return Response({
+            'success': True,
+            'message': f'User {user.email} has been unblocked',
+            'user': UserDetailSerializer(user).data
+        })
+
+class DeleteUserView(APIView):
+    """Soft delete a user"""
+    permission_classes = [IsAdminUser]
+    
+    def post(self, request):
+        serializer = DeleteUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = serializer.user
+        user.soft_delete()
+        
+        return Response({
+            'success': True,
+            'message': f'User {user.email} has been deleted',
+            'user': UserDetailSerializer(user).data
+        })
+
+
+class AccountRestoreView(BaseResponseMixin, APIView):
+    permission_classes = (permissions.IsAdminUser,)
+
+    def post(self, request):
+        serializer = AccountRestoreSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response(
+                message="Invalid data provided",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = serializer.user
+        user.restore()
+
+        return self.success_response(
+            data={"email": user.email},
+            message="Account restored successfully"
+        )
+
+
+class UserStatsView(APIView):
+    """User statistics for dashboard"""
+    permission_classes = [IsAdminUser]
+    
+    def get(self, request):
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True, is_deleted=False).count()
+        blocked_users = User.objects.filter(is_blocked=True).count()
+        deleted_users = User.objects.filter(is_deleted=True).count()
+        
+        event_admins = User.objects.filter(event_admin=True).count()
+        shop_admins = User.objects.filter(shop_admin=True).count()
+        shoppers = User.objects.filter(shopper=True).count()
+        
+        return Response({
+            'total_users': total_users,
+            'active_users': active_users,
+            'blocked_users': blocked_users,
+            'deleted_users': deleted_users,
+            'event_admins': event_admins,
+            'shop_admins': shop_admins,
+            'shoppers': shoppers
+        })

@@ -27,22 +27,7 @@ SOCIAL_AUTH_PROVIDERS = (
     ("google", "Google"),
     ("apple", "Apple"),
     ("facebook", "Facebook"),
-    ("github", "GitHub"),
-    ("twitter", "Twitter"),
-    ("linkedin", "LinkedIn"),
-    ("microsoft", "Microsoft"),
-    ("amazon", "Amazon"),
-    ("discord", "Discord"),
-    ("twitch", "Twitch"),
-    ("slack", "Slack"),
-    ("instagram", "Instagram"),
-    ("pinterest", "Pinterest"),
-    ("reddit", "Reddit"),
-    ("snapchat", "Snapchat"),
-    ("tiktok", "TikTok"),
-    ("youtube", "YouTube"),
-    ("whatsapp", "WhatsApp"),
-    ("telegram", "Telegram"),
+    ("email", "Email/Password"),
     ("other", "Other"),
 )
 
@@ -50,27 +35,33 @@ SOCIAL_AUTH_PROVIDERS = (
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, unique=False, blank=True, null=True)
-
+    
     social_auth_provider = models.CharField(
-        max_length=50, choices=SOCIAL_AUTH_PROVIDERS, blank=True, null=True
+        max_length=50, choices=SOCIAL_AUTH_PROVIDERS, blank=True, null=True, default="email"
     )
-
+    
+    # Soft delete
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
+    
+    # Block
     is_blocked = models.BooleanField(default=False)
-
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    blocked_reason = models.TextField(blank=True, null=True)
+    
+    # Roles
     event_admin = models.BooleanField(default=False)
     shop_admin = models.BooleanField(default=False)
     shopper = models.BooleanField(default=False)
-
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
-
+    
     objects = UserManager()
-
+    
     def __str__(self):
         return self.email
     
@@ -87,27 +78,40 @@ class User(AbstractUser):
             return "shopper"
         else:
             return "user"
-
+    
     def soft_delete(self):
-        """Mark the user as deleted."""
+        """Mark the user as deleted"""
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.is_active = False
         self.save()
-
+    
+    def block(self, reason=None):
+        """Block the user"""
+        self.is_blocked = True
+        self.blocked_at = timezone.now()
+        self.blocked_reason = reason
+        self.is_active = False
+        self.save()
+    
+    def unblock(self):
+        """Unblock the user"""
+        self.is_blocked = False
+        self.blocked_at = None
+        self.blocked_reason = None
+        self.is_active = True
+        self.save()
+    
     def restore(self):
-        """Restore a soft-deleted user."""
+        """Restore a soft-deleted user"""
         self.is_deleted = False
         self.deleted_at = None
         self.is_active = True
         self.save()
-
+    
     class Meta:
-        db_table = ""
-        managed = True
         verbose_name = "User"
         verbose_name_plural = "Users"
-
 
 class OTP(models.Model):
     PURPOSE_STATUS = [

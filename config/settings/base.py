@@ -53,7 +53,7 @@ INSTALLED_APPS = [
     "apps.shopadmin",
     "apps.shopowner",
     "apps.shopper",
-
+    "apps.revenue",
 ]
 
 MIDDLEWARE = [
