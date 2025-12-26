@@ -81,7 +81,7 @@ class ShopRequestListView(BaseResponseMixin, APIView):
                 return self.error_response(message="Not authorized")
             
             event_shops = event.event_shops.filter(status='pending')
-            serializer = EventShopListSerializer(event_shops, many=True)
+            serializer = EventShopListSerializer(event_shops, many=True,  context={'request': request})
             
             return self.success_response(
                 data=serializer.data,
