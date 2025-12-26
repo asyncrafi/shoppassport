@@ -116,6 +116,7 @@ class EventShopListSerializer(serializers.ModelSerializer):
     shop_logo = serializers.ImageField(source='shop.shop_logo', read_only=True)
     total_participants = serializers.SerializerMethodField()
 
+    cover_images = ShopCoverImageSerializer(source='shop.cover_images', many=True, read_only=True)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -128,7 +129,7 @@ class EventShopListSerializer(serializers.ModelSerializer):
         model = EventShop
         fields = [
             'id', 'event', 'shop', 'event_name', 'shop_name',
-            'shop_location', 'shop_logo', 'total_participants', 'status', 'created_at'
+            'shop_location', 'shop_logo', 'cover_images', 'total_participants', 'status', 'created_at'
         ]
         read_only_fields = ['id', 'status', 'created_at']
     
