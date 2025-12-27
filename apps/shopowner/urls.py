@@ -19,5 +19,6 @@ urlpatterns = [
     
     # My Shop Events
     path('my-shop-events/', views.MyShopEventsView.as_view(), name='my-shop-events'),
+    path('my-shops/', views.MyShopsListView.as_view(), name='my-shops-list'),
 ]
 

@@ -289,3 +289,23 @@ class MyShopEventsView(BaseResponseMixin, APIView):
             )
         except Exception as exc:
             return self.handle_exception(exc)
+        
+
+class MyShopsListView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-shops/
+    List all shops owned by the current user
+    """
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        try:
+            shops = Shop.objects.filter(shop_owner=request.user).order_by('-created_at')
+            from apps.shop.serializers import ShopDetailSerializer
+            serializer = ShopDetailSerializer(shops, many=True, context={'request': request})
+            
+            return self.success_response(
+                data=serializer.data,
+                message="My shops retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)

@@ -149,3 +149,5 @@ class EventShopCreateSerializer(serializers.ModelSerializer):
         if EventShop.objects.filter(event=data['event'], shop=data['shop']).exists():
             raise serializers.ValidationError('Shop already added to this event')
         return data
+    
+
