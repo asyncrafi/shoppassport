@@ -147,7 +147,7 @@ class ParticipantRequestCreateView(BaseResponseMixin, APIView):
         try:
             serializer = ParticipantCreateSerializer(
                 data=request.data,
-                context={'request': request}  # Pass request in context
+                context={'request': request} 
             )
             serializer.is_valid(raise_exception=True)
             participant = serializer.save()

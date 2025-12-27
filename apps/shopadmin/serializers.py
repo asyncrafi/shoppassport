@@ -20,7 +20,9 @@ class EventImageSerializer(serializers.ModelSerializer):
 
 
 class EventListSerializer(serializers.ModelSerializer):
-    admin_name = serializers.CharField(source='shop_admin.get_full_name', read_only=True)
+    admin_name = serializers.CharField(source='shop_admin.profile.name', read_only=True)
+    admin_email = serializers.EmailField(source='shop_admin.email', read_only=True)
+    admin_phone = serializers.CharField(source='shop_admin.profile.phone', read_only=True)
     total_shops = serializers.SerializerMethodField()
     event_date_status = serializers.SerializerMethodField()
 
@@ -29,8 +31,8 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'name', 'location', 'from_date', 'to_date',
-            'images', 'admin_name', 'total_shops', 'status', 'event_date_status', 'created_at'
+            'id', 'name', 'location', 'latitude', 'longitude', 'from_date', 'to_date',
+            'images', 'admin_name', 'admin_email', 'admin_phone', 'total_shops', 'status', 'event_date_status', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
 
