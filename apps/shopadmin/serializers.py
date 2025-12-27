@@ -163,7 +163,6 @@ class ParticipantListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # No need to handle shopper_avatar here since it's now a SerializerMethodField
         return representation
     
     
