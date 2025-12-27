@@ -31,7 +31,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'name', 'location', 'latitude', 'longitude', 'from_date', 'to_date',
+            'id', 'name', 'about_the_event', 'location', 'latitude', 'longitude', 'from_date', 'to_date',
             'images', 'admin_name', 'admin_email', 'admin_phone', 'total_shops', 'status', 'event_date_status', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
