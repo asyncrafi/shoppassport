@@ -137,13 +137,42 @@ class ParticipantListSerializer(serializers.ModelSerializer):
     """List participants with basic info"""
     event_name = serializers.CharField(source='event_shop.event.name', read_only=True)
     shop_name = serializers.CharField(source='event_shop.shop.shop_name', read_only=True)
+    shopper_avatar = serializers.ImageField(source='shopper.profile.profile_picture', read_only=True)
+    
+    def get_shopper_avatar(self, obj):
+        """Get shopper avatar with null checks"""
+        request = self.context.get('request')
+        
+        # Check if shopper exists
+        if not obj.shopper:
+            return None
+        
+        # Check if profile exists
+        if not hasattr(obj.shopper, 'profile'):
+            return None
+        
+        # Check if profile_picture exists
+        if not obj.shopper.profile.profile_picture:
+            return None
+        
+        # Build absolute URI
+        if request:
+            return request.build_absolute_uri(obj.shopper.profile.profile_picture.url)
+        
+        return obj.shopper.profile.profile_picture.url
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # No need to handle shopper_avatar here since it's now a SerializerMethodField
+        return representation
+    
     
     class Meta:
         model = EventShopParticipant
         fields = [
             'id', 'event_shop', 'shopper', 'participant_name', 'participant_email',
             'participant_phone', 'contact_number', 'event_name', 'shop_name',
-            'status', 'created_at'
+            'status', 'created_at', 'shopper_avatar'
         ]
         read_only_fields = ['id', 'created_at', 'status']
 

@@ -225,7 +225,7 @@ class ParticipantRequestsListView(BaseResponseMixin, APIView):
                 status='pending'
             ).order_by('-created_at')
 
-            serializer = ParticipantListSerializer(queryset, many=True)
+            serializer = ParticipantListSerializer(queryset, many=True, context={'request': request})
             return self.success_response(
                 data=serializer.data,
                 message="Pending participant requests retrieved successfully"
