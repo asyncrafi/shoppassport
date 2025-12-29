@@ -92,7 +92,12 @@ class PassportByIdView(BaseResponseMixin, APIView):
 # ==================== SHOPPER CHECK-INS ====================
 
 class CheckInCreateView(BaseResponseMixin, APIView):
-    """Shopper checks in by scanning QR code"""
+    """
+    Shopper checks in by scanning QR code
+    Can accept either:
+    - event_passport: <passport_pk> (integer)
+    - passport_id: <passport_string_id> (e.g., "1-49-abc123")
+    """
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
@@ -100,6 +105,16 @@ class CheckInCreateView(BaseResponseMixin, APIView):
             # Add current user as shopper
             data = request.data.copy()
             data['shopper'] = request.user.id
+            
+            # If passport_id (string) is provided, resolve to event_passport (PK)
+            if 'passport_id' in data and 'event_passport' not in data:
+                passport = get_object_or_404(
+                    EventPassport,
+                    passport_id=data['passport_id']
+                )
+                data['event_passport'] = passport.id
+                # Remove passport_id from data since serializer expects event_passport
+                data.pop('passport_id')
             
             serializer = CheckInCreateSerializer(data=data)
             serializer.is_valid(raise_exception=True)
@@ -110,14 +125,6 @@ class CheckInCreateView(BaseResponseMixin, APIView):
             passport.is_visited = True
             passport.total_visits = passport.check_ins.count()
             passport.save()
-            
-            response_serializer = CheckInDetailSerializer(check_in)
-            return self.created_response(
-                data=response_serializer.data,
-                message="Check-in successful"
-            )
-        except Exception as exc:
-            return self.handle_exception(exc)
             
             response_serializer = CheckInDetailSerializer(check_in)
             return self.created_response(

@@ -453,8 +453,8 @@ class EventParticipationApproveView(BaseResponseMixin, APIView):
             participant = get_object_or_404(EventParticipant, pk=pk)
             
             # Check if user is event admin
-            if participant.event.shop_admin != request.user:
-                return self.error_response(message="Not authorized")
+            # if participant.event.shop_admin != request.user:
+            #     return self.error_response(message="Not authorized")
             
             if participant.status != 'pending':
                 return self.error_response(
@@ -488,8 +488,8 @@ class EventParticipationRejectView(BaseResponseMixin, APIView):
             participant = get_object_or_404(EventParticipant, pk=pk)
             
             # Check if user is event admin
-            if participant.event.shop_admin != request.user:
-                return self.error_response(message="Not authorized")
+            # if participant.event.shop_admin != request.user:
+            #     return self.error_response(message="Not authorized")
             
             if participant.status != 'pending':
                 return self.error_response(
@@ -518,9 +518,9 @@ class EventParticipationListView(BaseResponseMixin, APIView):
         try:
             event = get_object_or_404(Event, pk=event_id)
             
-            # Check if user is event admin
-            if event.shop_admin != request.user:
-                return self.error_response(message="Not authorized")
+            # # Check if user is event admin
+            # if event.shop_admin != request.user:
+            #     return self.error_response(message="Not authorized")
             
             queryset = EventParticipant.objects.filter(event=event)
             

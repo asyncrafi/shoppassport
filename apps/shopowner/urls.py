@@ -22,8 +22,10 @@ urlpatterns = [
     path('my-event-participations/', views.MyEventParticipationListView.as_view(), name='my-event-participations-list'),
     path('my-event-participations/<int:pk>/', views.MyEventParticipationDetailView.as_view(), name='my-event-participation-detail'),
     path('my-event-participations/<int:pk>/cancel/', views.MyEventParticipationDeleteView.as_view(), name='my-event-participation-cancel'),
+    
     path('event-participations/<int:pk>/approve/', views.EventParticipationApproveView.as_view(), name='event-participation-approve'),
     path('event-participations/<int:pk>/reject/', views.EventParticipationRejectView.as_view(), name='event-participation-reject'),
+
     path('events/<int:event_id>/participations/', views.EventParticipationListView.as_view(), name='event-participations-list'),
     
     # My Shop Events
