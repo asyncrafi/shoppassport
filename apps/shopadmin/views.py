@@ -16,7 +16,7 @@ from .serializers import (
     EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer,
     ParticipantListSerializer, ParticipantUpdateSerializer,
     PassportListSerializer, PassportDetailSerializer, PassportCreateSerializer,
-    EventApproveRejectSerializer
+    EventApproveRejectSerializer, EventAdminEventWithCheckInsSerializer
 )
 
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -467,3 +467,57 @@ class SuperAdminEventApproveRejectAPIView(APIView):
             'message': message,
             'event': EventDetailSerializer(event).data
         }, status=status.HTTP_200_OK)
+
+
+# ==================== EVENT ADMIN: MY EVENTS WITH ALL CHECK-INS ====================
+
+class MyEventsWithAllCheckInsListView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopadmin/my-events-with-checkins/
+    Event admin sees all their events + all shops in each + all check-ins per shop
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get all events created by current admin
+            queryset = Event.objects.filter(
+                shop_admin=request.user
+            ).order_by('-created_at')
+            
+            serializer = EventAdminEventWithCheckInsSerializer(
+                queryset,
+                many=True,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="My events with check-ins retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyEventsWithAllCheckInsDetailView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopadmin/my-events-with-checkins/{event_id}/
+    Event admin sees detailed view of one event with all shops and their check-ins
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, event_id):
+        try:
+            event = get_object_or_404(Event, pk=event_id, shop_admin=request.user)
+            
+            serializer = EventAdminEventWithCheckInsSerializer(
+                event,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Event details with check-ins retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)

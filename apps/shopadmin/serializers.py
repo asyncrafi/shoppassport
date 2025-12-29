@@ -435,3 +435,273 @@ class EventApproveRejectSerializer(serializers.Serializer):
         if value not in ['approve', 'reject']:
             raise serializers.ValidationError("Action must be 'approve' or 'reject'")
         return value
+
+
+class ShopPassportWithCheckInSerializer(serializers.ModelSerializer):
+    """Serializer for passports with check-in status for shopper"""
+    shop_name = serializers.CharField(source='shop.shop_name', read_only=True)
+    shop_location = serializers.CharField(source='shop.shop_location', read_only=True)
+    shop_logo = serializers.SerializerMethodField()
+    qr_code_url = serializers.SerializerMethodField()
+    passport_qr_id = serializers.CharField(source='passport_id', read_only=True)
+    is_visited = serializers.SerializerMethodField()
+    check_in_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EventPassport
+        fields = [
+            'id', 'passport_qr_id', 'shop_id', 'shop_name', 'shop_location',
+            'shop_logo', 'qr_code_url', 'is_visited', 'check_in_count',
+            'valid_from', 'valid_to'
+        ]
+        read_only_fields = fields
+    
+    def get_shop_logo(self, obj):
+        request = self.context.get('request')
+        if obj.shop.shop_logo and request:
+            return request.build_absolute_uri(obj.shop.shop_logo.url)
+        return None
+    
+    def get_qr_code_url(self, obj):
+        request = self.context.get('request')
+        if obj.shop_qr_code and request:
+            return request.build_absolute_uri(obj.shop_qr_code.url)
+        return None
+    
+    def get_is_visited(self, obj):
+        """Check if shopper checked in to this passport"""
+        request = self.context.get('request')
+        if request and request.user:
+            return ShopperCheckIn.objects.filter(
+                event_passport=obj,
+                shopper=request.user
+            ).exists()
+        return False
+    
+    def get_check_in_count(self, obj):
+        """Count check-ins for this shopper to this passport"""
+        request = self.context.get('request')
+        if request and request.user:
+            return ShopperCheckIn.objects.filter(
+                event_passport=obj,
+                shopper=request.user
+            ).count()
+        return 0
+
+
+class AcceptedEventWithShopsSerializer(serializers.ModelSerializer):
+    """Serializer for accepted events with shops and check-in status"""
+    event_name = serializers.CharField(source='event.name', read_only=True)
+    event_location = serializers.CharField(source='event.location', read_only=True)
+    event_image = serializers.SerializerMethodField()
+    event_from_date = serializers.DateField(source='event.from_date', read_only=True)
+    event_to_date = serializers.DateField(source='event.to_date', read_only=True)
+    event_status = serializers.CharField(source='event.status', read_only=True)
+    shops = serializers.SerializerMethodField()
+    total_shops = serializers.SerializerMethodField()
+    total_visited_shops = serializers.SerializerMethodField()
+    participation_status = serializers.CharField(source='status', read_only=True)
+    
+    class Meta:
+        model = EventParticipant
+        fields = [
+            'id', 'event', 'event_name', 'event_location', 'event_image',
+            'event_from_date', 'event_to_date', 'event_status', 
+            'participation_status', 'shops', 'total_shops', 'total_visited_shops',
+            'created_at'
+        ]
+        read_only_fields = fields
+    
+    def get_event_image(self, obj):
+        """Get event image"""
+        request = self.context.get('request')
+        if obj.event.image and request:
+            return request.build_absolute_uri(obj.event.image.url)
+        return None
+    
+    def get_shops(self, obj):
+        """Get all shops in this event with check-in status"""
+        passports = EventPassport.objects.filter(event=obj.event)
+        serializer = ShopPassportWithCheckInSerializer(
+            passports,
+            many=True,
+            context=self.context
+        )
+        return serializer.data
+    
+    def get_total_shops(self, obj):
+        """Total shops in event"""
+        return EventPassport.objects.filter(event=obj.event).count()
+    
+    def get_total_visited_shops(self, obj):
+        """How many shops shopper visited in this event"""
+        request = self.context.get('request')
+        if request and request.user:
+            return ShopperCheckIn.objects.filter(
+                event_passport__event=obj.event,
+                shopper=request.user
+            ).values('event_passport__shop').distinct().count()
+        return 0
+
+
+# ==================== SHOP OWNER: MY EVENTS WITH CHECK-INS ====================
+
+class CheckInUserSerializer(serializers.ModelSerializer):
+    """Serializer for users who checked in"""
+    shopper_name = serializers.CharField(source='shopper.get_full_name', read_only=True)
+    shopper_email = serializers.EmailField(source='shopper.email', read_only=True)
+    shopper_avatar = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ShopperCheckIn
+        fields = ['id', 'shopper_id', 'shopper_name', 'shopper_email', 'shopper_avatar', 'check_in_time', 'status']
+        read_only_fields = fields
+    
+    def get_shopper_avatar(self, obj):
+        request = self.context.get('request')
+        if obj.shopper and hasattr(obj.shopper, 'profile') and obj.shopper.profile.profile_picture:
+            if request:
+                return request.build_absolute_uri(obj.shopper.profile.profile_picture.url)
+        return None
+
+
+class ShopWithCheckInsSerializer(serializers.ModelSerializer):
+    """Serializer for shop with check-in users"""
+    shop_name = serializers.CharField(source='shop.shop_name', read_only=True)
+    shop_location = serializers.CharField(source='shop.shop_location', read_only=True)
+    shop_logo = serializers.SerializerMethodField()
+    passport_qr_id = serializers.CharField(source='passport_id', read_only=True)
+    qr_code_url = serializers.SerializerMethodField()
+    check_ins = serializers.SerializerMethodField()
+    total_check_ins = serializers.SerializerMethodField()
+    unique_visitors = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EventPassport
+        fields = [
+            'id', 'shop_id', 'shop_name', 'shop_location', 'shop_logo',
+            'passport_qr_id', 'qr_code_url', 'total_check_ins', 'unique_visitors',
+            'check_ins', 'valid_from', 'valid_to'
+        ]
+        read_only_fields = fields
+    
+    def get_shop_logo(self, obj):
+        request = self.context.get('request')
+        if obj.shop.shop_logo and request:
+            return request.build_absolute_uri(obj.shop.shop_logo.url)
+        return None
+    
+    def get_qr_code_url(self, obj):
+        request = self.context.get('request')
+        if obj.shop_qr_code and request:
+            return request.build_absolute_uri(obj.shop_qr_code.url)
+        return None
+    
+    def get_check_ins(self, obj):
+        """List all users who checked in to this shop"""
+        check_ins = ShopperCheckIn.objects.filter(event_passport=obj).order_by('-check_in_time')
+        serializer = CheckInUserSerializer(check_ins, many=True, context=self.context)
+        return serializer.data
+    
+    def get_total_check_ins(self, obj):
+        return ShopperCheckIn.objects.filter(event_passport=obj).count()
+    
+    def get_unique_visitors(self, obj):
+        return ShopperCheckIn.objects.filter(
+            event_passport=obj
+        ).values('shopper').distinct().count()
+
+
+class ShopOwnerEventWithShopsSerializer(serializers.ModelSerializer):
+    """Serializer for shop owner's event with their shops and check-ins"""
+    event_name = serializers.CharField(source='event.name', read_only=True)
+    event_location = serializers.CharField(source='event.location', read_only=True)
+    event_image = serializers.SerializerMethodField()
+    event_from_date = serializers.DateField(source='event.from_date', read_only=True)
+    event_to_date = serializers.DateField(source='event.to_date', read_only=True)
+    event_status = serializers.CharField(source='event.status', read_only=True)
+    shops = serializers.SerializerMethodField()
+    total_shops = serializers.SerializerMethodField()
+    total_check_ins = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EventShop
+        fields = [
+            'id', 'event', 'event_name', 'event_location', 'event_image',
+            'event_from_date', 'event_to_date', 'event_status', 'status',
+            'shops', 'total_shops', 'total_check_ins', 'created_at'
+        ]
+        read_only_fields = fields
+    
+    def get_event_image(self, obj):
+        request = self.context.get('request')
+        if obj.event.image and request:
+            return request.build_absolute_uri(obj.event.image.url)
+        return None
+    
+    def get_shops(self, obj):
+        """Get shop with check-ins (only this shop from this event)"""
+        passport = EventPassport.objects.filter(event=obj.event, shop=obj.shop).first()
+        if passport:
+            serializer = ShopWithCheckInsSerializer(passport, context=self.context)
+            return [serializer.data]
+        return []
+    
+    def get_total_shops(self, obj):
+        """Total shops owned by this shop owner in this event"""
+        return EventShop.objects.filter(
+            event=obj.event,
+            shop__shop_owner=obj.shop.shop_owner
+        ).count()
+    
+    def get_total_check_ins(self, obj):
+        """Total check-ins for all shops of this owner in this event"""
+        return ShopperCheckIn.objects.filter(
+            event_passport__event=obj.event,
+            event_passport__shop__shop_owner=obj.shop.shop_owner
+        ).count()
+
+
+# ==================== EVENT ADMIN: MY EVENTS WITH ALL CHECK-INS ====================
+
+class EventAdminEventWithCheckInsSerializer(serializers.ModelSerializer):
+    """Serializer for event admin's event with all shops and check-ins"""
+    admin_name = serializers.CharField(source='shop_admin.get_full_name', read_only=True)
+    event_image = serializers.SerializerMethodField()
+    shops_with_checkins = serializers.SerializerMethodField()
+    total_shops = serializers.SerializerMethodField()
+    total_check_ins = serializers.SerializerMethodField()
+    total_unique_visitors = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'name', 'about_the_event', 'location', 'latitude', 'longitude',
+            'from_date', 'to_date', 'admin_name', 'event_image', 'status',
+            'shops_with_checkins', 'total_shops', 'total_check_ins', 'total_unique_visitors',
+            'created_at'
+        ]
+        read_only_fields = fields
+    
+    def get_event_image(self, obj):
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+    
+    def get_shops_with_checkins(self, obj):
+        """Get all shops in event with their check-ins"""
+        passports = EventPassport.objects.filter(event=obj)
+        serializer = ShopWithCheckInsSerializer(passports, many=True, context=self.context)
+        return serializer.data
+    
+    def get_total_shops(self, obj):
+        return EventPassport.objects.filter(event=obj).count()
+    
+    def get_total_check_ins(self, obj):
+        return ShopperCheckIn.objects.filter(event_passport__event=obj).count()
+    
+    def get_total_unique_visitors(self, obj):
+        return ShopperCheckIn.objects.filter(
+            event_passport__event=obj
+        ).values('shopper').distinct().count()

@@ -10,10 +10,11 @@ from rest_framework import status as rest_status
 from rest_framework.response import Response
 
 from apps.core.utils.mixins import BaseResponseMixin
-from apps.shopadmin.models import EventPassport, ShopperCheckIn, Event
+from apps.shopadmin.models import EventPassport, ShopperCheckIn, Event, EventParticipant
 from apps.shopadmin.serializers import (
     PassportListSerializer, PassportDetailSerializer,
-    CheckInListSerializer, CheckInDetailSerializer, CheckInCreateSerializer
+    CheckInListSerializer, CheckInDetailSerializer, CheckInCreateSerializer,
+    AcceptedEventWithShopsSerializer
 )
 
 
@@ -464,5 +465,84 @@ class DownloadQRCodeView(APIView):
         except Exception as exc:
             return Response(
                 {"success": False, "message": str(exc)},
+                    status=rest_status.HTTP_404_NOT_FOUND
+                )
+            
+            # Return QR code file
+            return Response({
+                "success": True,
+                "data": {
+                    "qr_code_url": request.build_absolute_uri(passport.shop_qr_code.url),
+                    "passport_id": passport.passport_id,
+                    "shop_name": passport.shop.shop_name,
+                    "event_name": passport.event.name
+                },
+                "message": "QR code retrieved successfully"
+            })
+            
+        except Exception as exc:
+            return Response(
+                {"success": False, "message": str(exc)},
                 status=rest_status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# ==================== SHOPPER ACCEPTED EVENTS & SHOPS ====================
+
+class MyAcceptedEventsView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopper/my-accepted-events/
+    List all events shopper requested and got accepted
+    Includes all shops in each event with check-in status
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get all accepted EventParticipant records for current shopper
+            queryset = EventParticipant.objects.filter(
+                shopper=request.user,
+                status='accepted'
+            ).order_by('-created_at')
+            
+            serializer = AcceptedEventWithShopsSerializer(
+                queryset,
+                many=True,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Accepted events retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyAcceptedEventDetailView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopper/my-accepted-events/{participation_id}/
+    Get detailed view of specific accepted event with all shops
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, pk):
+        try:
+            participation = get_object_or_404(
+                EventParticipant,
+                pk=pk,
+                shopper=request.user,
+                status='accepted'
+            )
+            
+            serializer = AcceptedEventWithShopsSerializer(
+                participation,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Event details retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)

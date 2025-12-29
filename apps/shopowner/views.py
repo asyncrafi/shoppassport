@@ -11,7 +11,8 @@ from apps.core.utils.mixins import BaseResponseMixin
 from apps.shopadmin.models import EventShopParticipant, EventShop, Event, EventParticipant
 from apps.shopadmin.serializers import (
     ParticipantListSerializer, ParticipantCreateSerializer,
-    EventParticipantListSerializer, EventParticipantCreateSerializer, EventParticipantDetailSerializer
+    EventParticipantListSerializer, EventParticipantCreateSerializer, EventParticipantDetailSerializer,
+    ShopOwnerEventWithShopsSerializer
 )
 from apps.shop.models import Shop
 from apps.shop.serializers import EventShopListSerializer, EventShopCreateSerializer
@@ -539,6 +540,76 @@ class EventParticipationListView(BaseResponseMixin, APIView):
             return self.success_response(
                 data=serializer.data,
                 message="Event participations retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+# ==================== SHOP OWNER: MY EVENTS WITH CHECK-INS ====================
+
+class MyEventsWithCheckInsListView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-events-with-checkins/
+    Shop owner sees all events their shops are in + users who checked in their shops
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get all events where current shop owner has shops
+            queryset = EventShop.objects.filter(
+                shop__shop_owner=request.user,
+                status='accepted'  # Only accepted shops
+            ).order_by('-created_at')
+            
+            serializer = ShopOwnerEventWithShopsSerializer(
+                queryset,
+                many=True,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="My events with check-ins retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyEventsWithCheckInsDetailView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-events-with-checkins/{event_id}/
+    Shop owner sees detailed view of one event with their shops and all check-ins
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, event_id):
+        try:
+            event = get_object_or_404(Event, pk=event_id)
+            
+            # Get all event-shop combinations for this owner in this event
+            queryset = EventShop.objects.filter(
+                event=event,
+                shop__shop_owner=request.user,
+                status='accepted'
+            )
+            
+            if not queryset.exists():
+                return self.error_response(
+                    message="You have no shops in this event"
+                )
+            
+            # Return first one (or could return all if owner has multiple shops in same event)
+            event_shop = queryset.first()
+            
+            serializer = ShopOwnerEventWithShopsSerializer(
+                event_shop,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Event details retrieved successfully"
             )
         except Exception as exc:
             return self.handle_exception(exc)
