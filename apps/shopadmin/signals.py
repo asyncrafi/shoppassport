@@ -48,6 +48,7 @@ def auto_create_passport_on_shop_approval(sender, instance, created, update_fiel
                 valid_from=instance.event.from_date,
                 valid_to=instance.event.to_date
             )
+            print("hello ....................passport created", passport.valid_from , passport.valid_to)
             
             logger.info(f"Passport created: {passport.id}, now generating QR code")
             

@@ -8,8 +8,11 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
 from apps.core.utils.mixins import BaseResponseMixin
-from apps.shopadmin.models import EventShopParticipant, EventShop, Event
-from apps.shopadmin.serializers import ParticipantListSerializer, ParticipantCreateSerializer
+from apps.shopadmin.models import EventShopParticipant, EventShop, Event, EventParticipant
+from apps.shopadmin.serializers import (
+    ParticipantListSerializer, ParticipantCreateSerializer,
+    EventParticipantListSerializer, EventParticipantCreateSerializer, EventParticipantDetailSerializer
+)
 from apps.shop.models import Shop
 from apps.shop.serializers import EventShopListSerializer, EventShopCreateSerializer
 
@@ -306,6 +309,236 @@ class MyShopsListView(BaseResponseMixin, APIView):
             return self.success_response(
                 data=serializer.data,
                 message="My shops retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+# ==================== EVENT-LEVEL PARTICIPATION ====================
+
+class EventParticipationRequestCreateView(BaseResponseMixin, APIView):
+    """
+    POST /api/shopowner/event-participation-requests/create/
+    Shopper creates participation request to join event (not specific shop)
+    Once approved, shopper can join shops in that event
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            serializer = EventParticipantCreateSerializer(
+                data=request.data,
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            participant = serializer.save()
+            
+            response_serializer = EventParticipantListSerializer(
+                participant,
+                context={'request': request}
+            )
+            return self.created_response(
+                data=response_serializer.data,
+                message="Event participation request created successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyEventParticipationListView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-event-participations/
+    List all event participation requests for current shopper
+    Query Params: ?status=pending|accepted|rejected, ?event_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # Get all event participations for current user
+            queryset = EventParticipant.objects.filter(
+                shopper=request.user
+            )
+            
+            # Filter by status
+            status_filter = request.query_params.get('status')
+            if status_filter in ('accepted', 'rejected', 'pending'):
+                queryset = queryset.filter(status=status_filter)
+            
+            # Filter by event
+            event_id = request.query_params.get('event_id')
+            if event_id:
+                queryset = queryset.filter(event_id=event_id)
+            
+            queryset = queryset.order_by('-created_at')
+            serializer = EventParticipantListSerializer(
+                queryset,
+                many=True,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Event participations retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyEventParticipationDetailView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/my-event-participations/<int:pk>/
+    Get details of a specific event participation request
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, pk):
+        try:
+            participant = get_object_or_404(
+                EventParticipant,
+                pk=pk,
+                shopper=request.user
+            )
+            serializer = EventParticipantDetailSerializer(
+                participant,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Event participation retrieved successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class MyEventParticipationDeleteView(BaseResponseMixin, APIView):
+    """
+    DELETE /api/shopowner/my-event-participations/<int:pk>/cancel/
+    Cancel/delete event participation request
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, pk):
+        try:
+            participant = get_object_or_404(
+                EventParticipant,
+                pk=pk,
+                shopper=request.user
+            )
+            # Only allow deletion if pending
+            if participant.status != 'pending':
+                return self.error_response(
+                    message=f"Cannot cancel a {participant.status} participation request"
+                )
+            
+            participant.delete()
+            
+            return self.deleted_response(
+                message="Event participation request cancelled successfully"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class EventParticipationApproveView(BaseResponseMixin, APIView):
+    """
+    POST /api/shopowner/event-participations/<int:pk>/approve/
+    Event admin approves event participation request
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, pk):
+        try:
+            participant = get_object_or_404(EventParticipant, pk=pk)
+            
+            # Check if user is event admin
+            if participant.event.shop_admin != request.user:
+                return self.error_response(message="Not authorized")
+            
+            if participant.status != 'pending':
+                return self.error_response(
+                    message=f"Cannot approve a {participant.status} participation request"
+                )
+            
+            participant.status = 'accepted'
+            participant.save()
+            
+            serializer = EventParticipantListSerializer(
+                participant,
+                context={'request': request}
+            )
+            return self.success_response(
+                data=serializer.data,
+                message="Event participation approved"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class EventParticipationRejectView(BaseResponseMixin, APIView):
+    """
+    POST /api/shopowner/event-participations/<int:pk>/reject/
+    Event admin rejects event participation request
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, pk):
+        try:
+            participant = get_object_or_404(EventParticipant, pk=pk)
+            
+            # Check if user is event admin
+            if participant.event.shop_admin != request.user:
+                return self.error_response(message="Not authorized")
+            
+            if participant.status != 'pending':
+                return self.error_response(
+                    message=f"Cannot reject a {participant.status} participation request"
+                )
+            
+            participant.status = 'rejected'
+            participant.save()
+            
+            return self.success_response(
+                message="Event participation rejected"
+            )
+        except Exception as exc:
+            return self.handle_exception(exc)
+
+
+class EventParticipationListView(BaseResponseMixin, APIView):
+    """
+    GET /api/shopowner/events/<int:event_id>/participations/
+    Event admin lists all participation requests for an event
+    Query Params: ?status=pending|accepted|rejected
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, event_id):
+        try:
+            event = get_object_or_404(Event, pk=event_id)
+            
+            # Check if user is event admin
+            if event.shop_admin != request.user:
+                return self.error_response(message="Not authorized")
+            
+            queryset = EventParticipant.objects.filter(event=event)
+            
+            # Filter by status
+            status_filter = request.query_params.get('status')
+            if status_filter in ('accepted', 'rejected', 'pending'):
+                queryset = queryset.filter(status=status_filter)
+            
+            queryset = queryset.order_by('-created_at')
+            serializer = EventParticipantListSerializer(
+                queryset,
+                many=True,
+                context={'request': request}
+            )
+            
+            return self.success_response(
+                data=serializer.data,
+                message="Event participations retrieved successfully"
             )
         except Exception as exc:
             return self.handle_exception(exc)

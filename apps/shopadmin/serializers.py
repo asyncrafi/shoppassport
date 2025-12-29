@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.shopadmin.models import Event, EventImage,  EventShop, EventShopParticipant, EventPassport, ShopperCheckIn
+from apps.shopadmin.models import Event, EventImage, EventParticipant,  EventShop, EventShopParticipant, EventPassport, ShopperCheckIn
 from apps.shop.models import Shop
 from apps.shop.serializers import ShopListSerializer
 
@@ -208,7 +208,92 @@ class ParticipantUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventShopParticipant
         fields = ['shopper', 'participant_name', 'participant_email', 'participant_phone', 'contact_number']
- 
+
+
+class EventParticipantListSerializer(serializers.ModelSerializer):
+    """List event-level participants"""
+    event_name = serializers.CharField(source='event.name', read_only=True)
+    shopper_name = serializers.CharField(source='shopper.get_full_name', read_only=True)
+    shopper_email = serializers.EmailField(source='shopper.email', read_only=True)
+    shopper_avatar = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EventParticipant
+        fields = [
+            'id', 'event', 'shopper', 'event_name', 'shopper_name', 'shopper_email',
+            'participant_name', 'participant_email', 'participant_phone', 'contact_number',
+            'status', 'created_at', 'shopper_avatar'
+        ]
+        read_only_fields = ['id', 'created_at', 'status']
+    
+    def get_shopper_avatar(self, obj):
+        """Get shopper avatar with null checks"""
+        request = self.context.get('request')
+        
+        if not obj.shopper or not hasattr(obj.shopper, 'profile'):
+            return None
+        
+        if not obj.shopper.profile.profile_picture:
+            return None
+        
+        if request:
+            return request.build_absolute_uri(obj.shopper.profile.profile_picture.url)
+        
+        return obj.shopper.profile.profile_picture.url
+
+
+class EventParticipantCreateSerializer(serializers.ModelSerializer):
+    """Shopper creates event participation request"""
+    
+    class Meta:
+        model = EventParticipant
+        fields = [
+            'event', 'participant_name', 'participant_email',
+            'participant_phone', 'contact_number'
+        ]
+    
+    def validate_participant_email(self, value):
+        if value and '@' not in value:
+            raise serializers.ValidationError("Invalid email format")
+        return value
+    
+    def validate(self, data):
+        """Check if shopper already has a participation request for this event"""
+        user = self.context.get('request').user
+        event = data.get('event')
+        
+        if EventParticipant.objects.filter(event=event, shopper=user).exists():
+            raise serializers.ValidationError(
+                "You have already submitted a participation request for this event"
+            )
+        return data
+    
+    def create(self, validated_data):
+        # Get the user from context (passed from the view)
+        user = self.context.get('request').user
+        validated_data['shopper'] = user
+        validated_data.setdefault('status', 'pending')
+        return super().create(validated_data)
+
+
+class EventParticipantDetailSerializer(serializers.ModelSerializer):
+    """Detailed event participant view"""
+    event_name = serializers.CharField(source='event.name', read_only=True)
+    event_location = serializers.CharField(source='event.location', read_only=True)
+    event_from_date = serializers.DateField(source='event.from_date', read_only=True)
+    event_to_date = serializers.DateField(source='event.to_date', read_only=True)
+    shopper_name = serializers.CharField(source='shopper.get_full_name', read_only=True)
+    shopper_email = serializers.EmailField(source='shopper.email', read_only=True)
+    
+    class Meta:
+        model = EventParticipant
+        fields = [
+            'id', 'event', 'shopper', 'event_name', 'event_location',
+            'event_from_date', 'event_to_date', 'shopper_name', 'shopper_email',
+            'participant_name', 'participant_email', 'participant_phone', 'contact_number',
+            'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'status']
 
 
 class PassportListSerializer(serializers.ModelSerializer):

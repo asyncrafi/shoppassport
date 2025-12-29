@@ -65,6 +65,36 @@ class EventShop(models.Model):
     def __str__(self):
         return f"{self.event.name} - {self.shop.shop_name} ({self.status})"
 
+
+class EventParticipant(models.Model):
+    """Event-level participation - shopper requests to join event"""
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='event_participants', blank=True, null=True)
+    shopper = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_participant_requests', blank=True, null=True)
+    participant_name = models.CharField(max_length=255, blank=True, null=True)
+    participant_email = models.EmailField(max_length=255, blank=True, null=True)
+    participant_phone = models.CharField(max_length=20, blank=True, null=True)
+    contact_number = models.CharField(max_length=20, blank=True, null=True)
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Event Participant"
+        verbose_name_plural = "Event Participants"
+        unique_together = ('event', 'shopper')  # One participation per event per shopper
+
+    def __str__(self):
+        return f"{self.participant_name or self.shopper.username} - {self.event.name}"
+
+
 class EventShopParticipant(models.Model):
     event_shop = models.ForeignKey(EventShop, on_delete=models.CASCADE, related_name='participants', blank=True, null=True)
     shopper = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_participations', blank=True, null=True)
