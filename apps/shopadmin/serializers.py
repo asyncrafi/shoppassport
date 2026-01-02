@@ -441,6 +441,7 @@ class ShopPassportWithCheckInSerializer(serializers.ModelSerializer):
     """Serializer for passports with check-in status for shopper"""
     shop_name = serializers.CharField(source='shop.shop_name', read_only=True)
     shop_location = serializers.CharField(source='shop.shop_location', read_only=True)
+    shop_phone = serializers.CharField(source='shop.contact_person_phone', read_only=True)
     shop_logo = serializers.SerializerMethodField()
     qr_code_url = serializers.SerializerMethodField()
     passport_qr_id = serializers.CharField(source='passport_id', read_only=True)
@@ -451,7 +452,7 @@ class ShopPassportWithCheckInSerializer(serializers.ModelSerializer):
         model = EventPassport
         fields = [
             'id', 'passport_qr_id', 'shop_id', 'shop_name', 'shop_location',
-            'shop_logo', 'qr_code_url', 'is_visited', 'check_in_count',
+            'shop_logo', 'shop_phone', 'qr_code_url', 'is_visited', 'check_in_count',
             'valid_from', 'valid_to'
         ]
         read_only_fields = fields
@@ -569,6 +570,7 @@ class ShopWithCheckInsSerializer(serializers.ModelSerializer):
     """Serializer for shop with check-in users"""
     shop_name = serializers.CharField(source='shop.shop_name', read_only=True)
     shop_location = serializers.CharField(source='shop.shop_location', read_only=True)
+    shop_phone = serializers.CharField(source='shop.contact_person_phone', read_only=True)
     shop_logo = serializers.SerializerMethodField()
     passport_qr_id = serializers.CharField(source='passport_id', read_only=True)
     qr_code_url = serializers.SerializerMethodField()
@@ -580,7 +582,7 @@ class ShopWithCheckInsSerializer(serializers.ModelSerializer):
         model = EventPassport
         fields = [
             'id', 'shop_id', 'shop_name', 'shop_location', 'shop_logo',
-            'passport_qr_id', 'qr_code_url', 'total_check_ins', 'unique_visitors',
+            'passport_qr_id', 'shop_phone', 'qr_code_url', 'total_check_ins', 'unique_visitors',
             'check_ins', 'valid_from', 'valid_to'
         ]
         read_only_fields = fields
@@ -667,7 +669,7 @@ class ShopOwnerEventWithShopsSerializer(serializers.ModelSerializer):
 class EventAdminEventWithCheckInsSerializer(serializers.ModelSerializer):
     """Serializer for event admin's event with all shops and check-ins"""
     admin_name = serializers.CharField(source='shop_admin.get_full_name', read_only=True)
-    event_image = serializers.SerializerMethodField()
+    event_images = serializers.SerializerMethodField()  # plural
     shops_with_checkins = serializers.SerializerMethodField()
     total_shops = serializers.SerializerMethodField()
     total_check_ins = serializers.SerializerMethodField()
@@ -677,18 +679,20 @@ class EventAdminEventWithCheckInsSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             'id', 'name', 'about_the_event', 'location', 'latitude', 'longitude',
-            'from_date', 'to_date', 'admin_name', 'event_image', 'status',
+            'from_date', 'to_date', 'admin_name', 'event_images',
             'shops_with_checkins', 'total_shops', 'total_check_ins', 'total_unique_visitors',
             'created_at'
         ]
         read_only_fields = fields
     
-    def get_event_image(self, obj):
+    def get_event_images(self, obj):  # Changed from get_event_image to get_event_images
         request = self.context.get('request')
-        if obj.image and request:
-            return request.build_absolute_uri(obj.image.url)
-        return None
-    
+        # Get all images from the related EventImage model
+        event_images = obj.images.all()
+        if event_images and request:
+            return [request.build_absolute_uri(img.image.url) for img in event_images]
+        return []
+        
     def get_shops_with_checkins(self, obj):
         """Get all shops in event with their check-ins"""
         passports = EventPassport.objects.filter(event=obj)
