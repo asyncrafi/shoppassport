@@ -21,9 +21,9 @@ DATABASES = {
     }
 }
 
-EMAIL_HOST = env.str('EMAIL_HOST_DEV', default='smtp4dev')  # For string values
-EMAIL_PORT = env.int('EMAIL_PORT_DEV', default=25)          # For integer values
-EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS_DEV', default=False)  # For boolean values
+EMAIL_HOST = env.str('EMAIL_HOST_DEV', default='smtp4dev')  
+EMAIL_PORT = env.int('EMAIL_PORT_DEV', default=25)          
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS_DEV', default=False)  
 EMAIL_HOST_USER = env.str('EMAIL_HOST_USER_DEV', default='')
 EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD_DEV', default='')
 DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL_DEV', default='no-reply@example.com')

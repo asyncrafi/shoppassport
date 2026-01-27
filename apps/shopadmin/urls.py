@@ -25,6 +25,10 @@ urlpatterns = [
     path('passports/<int:pk>/', views.PassportDetailView.as_view(), name='passport-detail'),
     path('passports/<int:pk>/update/', views.PassportUpdateView.as_view(), name='passport-update'),
     path('passports/<int:pk>/delete/', views.PassportDeleteView.as_view(), name='passport-delete'),
+    
+    # Event Admin - My Events with Check-ins URLs
+    path('my-events-with-checkins/', views.MyEventsWithAllCheckInsListView.as_view(), name='my-events-with-checkins-list'),
+    path('my-events-with-checkins/<int:event_id>/', views.MyEventsWithAllCheckInsDetailView.as_view(), name='my-events-with-checkins-detail'),
 ]
 
 
