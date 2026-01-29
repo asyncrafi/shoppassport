@@ -27,6 +27,25 @@ services:
       - "5435:5432"
     restart: unless-stopped
 
+    
+  nginx:
+    image: nginx:alpine
+    container_name: hrai_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/sites-available:/etc/nginx/conf.d
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/lib/letsencrypt:/var/lib/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - api
+    networks:
+      - default
+
 volumes:
   postgres_data:
   static_volume:

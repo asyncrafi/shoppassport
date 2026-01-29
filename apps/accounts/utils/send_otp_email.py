@@ -1,7 +1,7 @@
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-from apps.core.utils.brevo_service import BrevoEmailService
+# from apps.core.utils.brevo_service import BrevoEmailService
 
 from apps.core.utils.mailgun_service import MailgunEmailService
 

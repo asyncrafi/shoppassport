@@ -20,11 +20,11 @@ CSRF_COOKIE_SECURE = True
 
 
 # CORS settings for production
-# CORS_ALLOWED_ORIGINS = [
-#     "https://hrlynx.ai",
-#     "https://www.hrlynx.ai",
-#     "https://api.hrlynx.ai",
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "https://shophopapp.com",
+    "https://www.shophopapp.com",
+    "https://api.shophopapp.com",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -34,14 +34,15 @@ USE_X_FORWARDED_PORT = True
 
 # Add this to your production settings
 
-# CSRF_TRUSTED_ORIGINS = [
-#     "https://hrlynx.ai",
-#     "https://www.hrlynx.ai",
-#     "https://api.hrlynx.ai",
-#     "http://hrlynx.ai",        # Add these HTTP versions
-#     "http://www.hrlynx.ai",
-#     "http://api.hrlynx.ai",
-# ]
+CSRF_TRUSTED_ORIGINS = [
+    "https://shophopapp.com",
+    "https://www.shophopapp.com",
+    "https://api.shophopapp.com",
+    "http://shophopapp.com",     
+    "http://www.shophopapp.com",
+    "http://api.shophopapp.com",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -70,16 +71,16 @@ DATABASES = {
 # BREVO_FROM_EMAIL = env.str('BREVO_FROM_EMAIL')
 # BREVO_FROM_NAME = env.str('BREVO_FROM_NAME')
 
-# MAILGUN_API_KEY = env.str("MAILGUN_API_KEY")
-# MAILGUN_DOMAIN = env.str("MAILGUN_DOMAIN")
-# MAILGUN_FROM_EMAIL = env.str("MAILGUN_FROM_EMAIL")
-# MAILGUN_FROM_NAME = env.str("MAILGUN_FROM_NAME")
+MAILGUN_API_KEY = env.str("MAILGUN_API_KEY")
+MAILGUN_DOMAIN = env.str("MAILGUN_DOMAIN")
+MAILGUN_FROM_EMAIL = env.str("MAILGUN_FROM_EMAIL")
+MAILGUN_FROM_NAME = env.str("MAILGUN_FROM_NAME")
 
 # Static files with WhiteNoise
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Production logging
-LOGGING = {
+LOGGING = { 
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
