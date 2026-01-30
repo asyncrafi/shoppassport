@@ -6,4 +6,4 @@ This code will expire in {{ valid_minutes }} minutes. Please do not share it wit
 
 If you did not request this, you can safely ignore this email.
 
-— HRlynx Team
+— ShopHopApp Team
