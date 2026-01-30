@@ -7,7 +7,7 @@ import random
 from .models import User, OTP, UserProfile
 from django.core.mail import send_mail
 from django.conf import settings
-from apps.accounts.local_email import send_otp_email
+from apps.accounts.utils.send_otp_email import send_otp_email
 
 class ShopperRegisterSerializer(serializers.ModelSerializer):
     phone_number = serializers.CharField(required=True)
