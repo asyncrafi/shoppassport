@@ -1,5 +1,4 @@
 from celery import shared_task
-from firebase_admin import messaging
 from django.utils import timezone
 from apps.accounts.models import User
 import logging
@@ -11,17 +10,34 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Initialize Firebase with APNs configuration
 from django.conf import settings
 
-if not firebase_admin._apps:
-    cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-    firebase_admin.initialize_app(cred)
+_firebase_initialized = False
+
+def _initialize_firebase():
+    """Lazy initialization of Firebase - only initialize when actually needed"""
+    global _firebase_initialized
+    
+    if _firebase_initialized:
+        return
+    
+    try:
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+            firebase_admin.initialize_app(cred)
+        _firebase_initialized = True
+    except Exception as e:
+        logger.error(f"Failed to initialize Firebase: {e}")
+        raise
 
 
 @shared_task(bind=True, max_retries=3)
 def send_push_notification(self, notification_id):
     try:
+        # Lazy initialize Firebase
+        _initialize_firebase()
+        
+        from firebase_admin import messaging
         from .models import Notification, FCMToken
 
         notification = Notification.objects.get(id=notification_id)

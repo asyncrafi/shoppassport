@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.shopowner",
     "apps.shopper",
     "apps.revenue",
+    "apps.notification",
 ]
 
 MIDDLEWARE = [

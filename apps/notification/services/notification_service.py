@@ -1,4 +1,3 @@
-from firebase_admin import messaging
 import logging
 from django.utils import timezone
 from apps.notification.models import Notification

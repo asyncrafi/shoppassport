@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/shopowner/", include("apps.shopowner.urls")),
     path("api/shopper/", include("apps.shopper.urls")),
     path("api/revenue/", include("apps.revenue.urls")),
+    path("api/notifications/", include("apps.notification.urls")),
 ]
 
 if settings.DEBUG:
