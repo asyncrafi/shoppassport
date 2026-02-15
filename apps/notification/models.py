@@ -88,7 +88,8 @@ class Notification(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user.email} - {self.title} ({self.notification_type})"
+        user_email = self.user.email if self.user else "No User"
+        return f"{user_email} - {self.title} ({self.notification_type})"
     
     def mark_as_read(self):
         """Mark notification as read"""
