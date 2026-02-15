@@ -168,7 +168,26 @@ def update_setting(request, setting_type):
 
 
 
+def privacy_policy(request):
+    setting = get_object_or_404(AppSettings, setting_type='privacy_policy')
+    return render(request, 'app_settings/setting_detail.html', {
+        'setting': setting,
+        'title': 'Privacy Policy'
+    })
 
+def terms_conditions(request):
+    setting = get_object_or_404(AppSettings, setting_type='terms_conditions')
+    return render(request, 'app_settings/setting_detail.html', {
+        'setting': setting,
+        'title': 'Terms & Conditions'
+    })
+
+def about_us(request):
+    setting = get_object_or_404(AppSettings, setting_type='about_us')
+    return render(request, 'app_settings/setting_detail.html', {
+        'setting': setting,
+        'title': 'About Us'
+    })
 
 
 

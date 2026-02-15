@@ -13,5 +13,9 @@ urlpatterns = [
     path('settings/', AppSettingsView.as_view(), name='settings'),
     path('settings/<str:setting_type>/', update_setting, name='update-setting'),
 
+
+    path('legal/privacy-policy/', privacy_policy, name='privacy_policy'),
+    path('legal/terms-conditions/', terms_conditions, name='terms_conditions'),
+    path('legal/about-us/', about_us, name='about_us'),
 ]
 
