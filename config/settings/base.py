@@ -20,7 +20,7 @@ BASE_URL = env("BASE_URL")
 
 # Application definition
 ROOT_URLCONF = "config.urls"
-ASGI_APPLICATION = "config.asgi.application"
+WSGI_APPLICATION = "config.wsgi.application"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
@@ -83,8 +83,6 @@ TEMPLATES = [
         },
     },
 ]
-
-WSGI_APPLICATION = "config.wsgi.application"
 
 
 # JWT settings
