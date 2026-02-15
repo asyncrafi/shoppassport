@@ -63,7 +63,6 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
-    
   nginx:
     image: nginx:alpine
     container_name: hrai_nginx
