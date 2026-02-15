@@ -559,7 +559,7 @@ class UserProfileGenericView(BaseResponseMixin, RetrieveUpdateAPIView):
                 user_id=request.user.id,
                 title="Profile Updated",
                 message="Your profile was updated.",
-                notification_types=['in_app'],
+                notification_types=['in_app', 'push'],
                 data={"action": "profile_update"}
             )
             
