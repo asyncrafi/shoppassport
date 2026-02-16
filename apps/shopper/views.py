@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status as rest_status
 from rest_framework.response import Response
+import logging
 
 from apps.core.utils.mixins import BaseResponseMixin
 from apps.shopadmin.models import EventPassport, ShopperCheckIn, Event, EventParticipant
@@ -16,6 +17,9 @@ from apps.shopadmin.serializers import (
     CheckInListSerializer, CheckInDetailSerializer, CheckInCreateSerializer,
     AcceptedEventWithShopsSerializer
 )
+from apps.notification.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
 
 
 # ==================== SHOPPER PASSPORTS ====================
@@ -128,10 +132,43 @@ class CheckInCreateView(BaseResponseMixin, APIView):
             passport.save()
             
             response_serializer = CheckInDetailSerializer(check_in)
-            return self.created_response(
+            response_data = self.created_response(
                 data=response_serializer.data,
                 message="Check-in successful"
             )
+            
+            # Send notifications to shop owner (async)
+            try:
+                event_shop = passport.event_shop
+                shop_owner = event_shop.shop.shop_owner
+                shop = event_shop.shop
+                shopper_name = request.user.get_full_name() or request.user.username
+                shop_name = shop.name
+                
+                # Notification data with PDF file info
+                notif_data = {
+                    "action": "check_in_received",
+                    "check_in_id": check_in.id,
+                    "shop_id": shop.id,
+                    "event_id": event_shop.event.id,
+                    "shopper_id": request.user.id
+                }
+                
+                # Add PDF file path if it exists
+                if shop.upload_pdf_pattern:
+                    notif_data["pdf_file_path"] = shop.upload_pdf_pattern.path if hasattr(shop.upload_pdf_pattern, 'path') else str(shop.upload_pdf_pattern)
+                
+                NotificationService.send_notification(
+                    user_id=shop_owner.id,
+                    title="New Check-In",
+                    message=f"{shopper_name} has checked in at your shop '{shop_name}'.",
+                    notification_types=['in_app', 'push', 'email'],
+                    data=notif_data
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send check-in notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 

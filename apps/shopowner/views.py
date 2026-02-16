@@ -6,6 +6,7 @@ File: apps/shopowner/views.py
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+import logging
 
 from apps.core.utils.mixins import BaseResponseMixin
 from apps.shopadmin.models import EventShopParticipant, EventShop, Event, EventParticipant
@@ -16,6 +17,9 @@ from apps.shopadmin.serializers import (
 )
 from apps.shop.models import Shop
 from apps.shop.serializers import EventShopListSerializer, EventShopCreateSerializer
+from apps.notification.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -111,10 +115,31 @@ class ShopRequestApproveView(BaseResponseMixin, APIView):
             event_shop.save()
             
             serializer = EventShopListSerializer(event_shop)
-            return self.success_response(
+            response_data = self.success_response(
                 data=serializer.data,
                 message="Shop request approved"
             )
+            
+            # Send notification to shop owner (async)
+            try:
+                shop_owner = event_shop.shop.shop_owner
+                shop_name = event_shop.shop.name
+                event_name = event_shop.event.name
+                NotificationService.send_notification(
+                    user_id=shop_owner.id,
+                    title="Shop Request Approved",
+                    message=f"Your shop '{shop_name}' has been approved to participate in '{event_name}'.",
+                    notification_types=['in_app', 'push'],
+                    data={
+                        "action": "shop_request_approved",
+                        "event_shop_id": event_shop.id,
+                        "event_id": event_shop.event.id
+                    }
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send approval notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 
@@ -134,9 +159,30 @@ class ShopRequestRejectView(BaseResponseMixin, APIView):
             event_shop.status = 'rejected'
             event_shop.save()
             
-            return self.success_response(
+            response_data = self.success_response(
                 message="Shop request rejected"
             )
+            
+            # Send notification to shop owner (async)
+            try:
+                shop_owner = event_shop.shop.shop_owner
+                shop_name = event_shop.shop.name
+                event_name = event_shop.event.name
+                NotificationService.send_notification(
+                    user_id=shop_owner.id,
+                    title="Shop Request Rejected",
+                    message=f"Your shop '{shop_name}' request for '{event_name}' has been rejected.",
+                    notification_types=['in_app', 'push'],
+                    data={
+                        "action": "shop_request_rejected",
+                        "event_shop_id": event_shop.id,
+                        "event_id": event_shop.event.id
+                    }
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send rejection notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 
@@ -157,10 +203,30 @@ class ParticipantRequestCreateView(BaseResponseMixin, APIView):
             participant = serializer.save()
             
             response_serializer = ParticipantListSerializer(participant)
-            return self.created_response(
+            response_data = self.created_response(
                 data=response_serializer.data,
                 message="Participation request created successfully"
             )
+            
+            # Send notification to event admin (async)
+            try:
+                event_admin = participant.event_shop.event.shop_admin
+                shop_name = participant.event_shop.shop.name
+                NotificationService.send_notification(
+                    user_id=event_admin.id,
+                    title="New Shop Participation Request",
+                    message=f"Shop '{shop_name}' has requested to participate in your event.",
+                    notification_types=['in_app', 'push'],
+                    data={
+                        "action": "shop_participation_request",
+                        "participant_id": participant.id,
+                        "shop_id": participant.event_shop.shop.id
+                    }
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 
@@ -338,10 +404,32 @@ class EventParticipationRequestCreateView(BaseResponseMixin, APIView):
                 participant,
                 context={'request': request}
             )
-            return self.created_response(
+            response_data = self.created_response(
                 data=response_serializer.data,
                 message="Event participation request created successfully"
             )
+            
+            # Send notification to event admin (async)
+            try:
+                event_admin = participant.event.shop_admin
+                shopper_name = request.user.get_full_name() or request.user.username
+                event_name = participant.event.name
+                NotificationService.send_notification(
+                    user_id=event_admin.id,
+                    title="New Event Participation Request",
+                    message=f"{shopper_name} has requested to participate in '{event_name}'.",
+                    notification_types=['in_app', 'push'],
+                    data={
+                        "action": "event_participation_request",
+                        "participant_id": participant.id,
+                        "event_id": participant.event.id,
+                        "shopper_id": request.user.id
+                    }
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send participation notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 
@@ -469,10 +557,30 @@ class EventParticipationApproveView(BaseResponseMixin, APIView):
                 participant,
                 context={'request': request}
             )
-            return self.success_response(
+            response_data = self.success_response(
                 data=serializer.data,
                 message="Event participation approved"
             )
+            
+            # Send notification to shopper (async)
+            try:
+                shopper = participant.shopper
+                event_name = participant.event.name
+                NotificationService.send_notification(
+                    user_id=shopper.id,
+                    title="Participation Approved",
+                    message=f"Your request to participate in '{event_name}' has been approved!",
+                    notification_types=['in_app', 'push'],
+                    data={
+                        "action": "participation_approved",
+                        "participant_id": participant.id,
+                        "event_id": participant.event.id
+                    }
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send approval notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 
@@ -500,9 +608,29 @@ class EventParticipationRejectView(BaseResponseMixin, APIView):
             participant.status = 'rejected'
             participant.save()
             
-            return self.success_response(
+            response_data = self.success_response(
                 message="Event participation rejected"
             )
+            
+            # Send notification to shopper (async)
+            try:
+                shopper = participant.shopper
+                event_name = participant.event.name
+                NotificationService.send_notification(
+                    user_id=shopper.id,
+                    title="Participation Request Rejected",
+                    message=f"Your request to participate in '{event_name}' has been rejected.",
+                    notification_types=['in_app', 'push'],
+                    data={
+                        "action": "participation_rejected",
+                        "participant_id": participant.id,
+                        "event_id": participant.event.id
+                    }
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send rejection notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 

@@ -217,12 +217,36 @@ def send_email_notification(self, notification_id):
         mailgun_service = MailgunEmailService()
         logger.info(f"📧 Sending email to {notification.user.email}")
 
+        # Extract attachment info from notification data
+        attachment = None
+        if notification.data and 'pdf_file_path' in notification.data:
+            attachment = notification.data.get('pdf_file_path')
+            logger.info(f"📎 Attaching PDF file: {attachment}")
+
+        # Build nice HTML email content
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2c3e50;">{notification.title}</h2>
+                    <p style="font-size: 16px; margin-bottom: 15px;">{notification.message}</p>
+                    <hr style="border: none; border-top: 1px solid #ecf0f1;">
+                    <p style="font-size: 12px; color: #7f8c8d;">
+                        This is an automatic notification from ShopHopApp.<br>
+                        Please find your shop details attached.
+                    </p>
+                </div>
+            </body>
+        </html>
+        """
+
         mailgun_service.send_transactional_email(
             to_email=notification.user.email,
             to_name=notification.user.profile.name,
             subject=notification.title,
-            html_content=f"<p>{notification.message}</p>",
-            text_content=notification.message
+            html_content=html_content,
+            text_content=notification.message,
+            attachment=attachment
         )
 
         notification.sent_at = timezone.now()

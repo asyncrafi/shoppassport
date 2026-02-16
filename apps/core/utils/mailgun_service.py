@@ -10,8 +10,8 @@ class MailgunEmailService:
         self.from_email = settings.MAILGUN_FROM_EMAIL
         self.from_name = settings.MAILGUN_FROM_NAME
 
-    def send_transactional_email(self, to_email, to_name, subject, html_content, text_content=None):
-        """Send a single transactional email via Mailgun"""
+    def send_transactional_email(self, to_email, to_name, subject, html_content, text_content=None, attachment=None):
+        """Send a single transactional email via Mailgun with optional attachments"""
         try:
             data = {
                 "from": f"{self.from_name} <{self.from_email}>",
@@ -23,10 +23,32 @@ class MailgunEmailService:
             if text_content:
                 data["text"] = text_content
 
+            # Handle file attachments
+            files = None
+            if attachment:
+                files = {}
+                if isinstance(attachment, str):
+                    # If it's a file path string
+                    try:
+                        with open(attachment, 'rb') as f:
+                            files['attachment'] = (attachment.split('/')[-1], f.read())
+                    except FileNotFoundError:
+                        print(f"⚠️ Attachment file not found: {attachment}")
+                elif isinstance(attachment, dict):
+                    # If it's a dict with file_path and other metadata
+                    file_path = attachment.get('file_path')
+                    if file_path:
+                        try:
+                            with open(file_path, 'rb') as f:
+                                files['attachment'] = (attachment.get('file_name', file_path.split('/')[-1]), f.read())
+                        except FileNotFoundError:
+                            print(f"⚠️ Attachment file not found: {file_path}")
+
             response = requests.post(
                 self.base_url,
                 auth=("api", self.api_key),
                 data=data,
+                files=files,
                 timeout=10
             )
 
