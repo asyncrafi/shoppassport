@@ -139,18 +139,17 @@ class CheckInCreateView(BaseResponseMixin, APIView):
             
             # Send notifications to shop owner (async)
             try:
-                event_shop = passport.event_shop
-                shop_owner = event_shop.shop.shop_owner
-                shop = event_shop.shop
+                shop_owner = passport.shop.shop_owner
+                shop = passport.shop
                 shopper_name = request.user.get_full_name() or request.user.username
-                shop_name = shop.name
+                shop_name = shop.shop_name
                 
                 # Notification data with PDF file info
                 notif_data = {
                     "action": "check_in_received",
                     "check_in_id": check_in.id,
                     "shop_id": shop.id,
-                    "event_id": event_shop.event.id,
+                    # "event_id": event_shop.event.id,
                     "shopper_id": request.user.id
                 }
                 
