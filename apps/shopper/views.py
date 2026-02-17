@@ -155,7 +155,11 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                 
                 # Add PDF file path if it exists
                 if shop.upload_pdf_pattern:
-                    notif_data["pdf_file_path"] = shop.upload_pdf_pattern.path if hasattr(shop.upload_pdf_pattern, 'path') else str(shop.upload_pdf_pattern)
+                    # Get the absolute file path properly
+                    from django.conf import settings
+                    import os
+                    file_path = os.path.join(settings.MEDIA_ROOT, shop.upload_pdf_pattern.name)
+                    notif_data["pdf_file_path"] = file_path
                 
                 NotificationService.send_notification(
                     user_id=shop_owner.id,

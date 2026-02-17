@@ -1,5 +1,8 @@
 import requests
+import logging
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class MailgunEmailService:
@@ -9,6 +12,7 @@ class MailgunEmailService:
         self.base_url = f"https://api.mailgun.net/v3/{self.domain}/messages"
         self.from_email = settings.MAILGUN_FROM_EMAIL
         self.from_name = settings.MAILGUN_FROM_NAME
+        logger.info(f"📧 Mailgun Service initialized for domain: {self.domain}")
 
     def send_transactional_email(self, to_email, to_name, subject, html_content, text_content=None, attachment=None):
         """Send a single transactional email via Mailgun with optional attachments"""
@@ -32,8 +36,11 @@ class MailgunEmailService:
                     try:
                         with open(attachment, 'rb') as f:
                             files['attachment'] = (attachment.split('/')[-1], f.read())
+                        print(f"✅ Attachment loaded successfully: {attachment}")
                     except FileNotFoundError:
-                        print(f"⚠️ Attachment file not found: {attachment}")
+                        print(f"❌ CRITICAL: Attachment file not found: {attachment}")
+                    except Exception as e:
+                        print(f"❌ CRITICAL: Error loading attachment {attachment}: {str(e)}")
                 elif isinstance(attachment, dict):
                     # If it's a dict with file_path and other metadata
                     file_path = attachment.get('file_path')
@@ -54,11 +61,12 @@ class MailgunEmailService:
 
             if response.status_code == 200:
                 print(f"✅ Email sent successfully to {to_email}")
+                print(f"📨 Mailgun Response: {response.json()}")
                 return response.json()
             else:
                 print(f"❌ Failed to send email to {to_email}")
-                print(f"Status: {response.status_code}")
-                print(f"Response: {response.text}")
+                print(f"❌ Status Code: {response.status_code}")
+                print(f"❌ Mailgun Response: {response.text}")
                 return None
 
         except requests.exceptions.RequestException as e:

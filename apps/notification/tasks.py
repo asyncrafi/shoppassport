@@ -222,6 +222,14 @@ def send_email_notification(self, notification_id):
         if notification.data and 'pdf_file_path' in notification.data:
             attachment = notification.data.get('pdf_file_path')
             logger.info(f"📎 Attaching PDF file: {attachment}")
+            # Verify file exists
+            import os
+            if os.path.exists(attachment):
+                logger.info(f"✅ PDF file exists at: {attachment}")
+            else:
+                logger.error(f"❌ PDF file NOT found at: {attachment}")
+        else:
+            logger.info(f"ℹ️ No attachment in notification data")
 
         # Build nice HTML email content
         html_content = f"""
@@ -240,7 +248,7 @@ def send_email_notification(self, notification_id):
         </html>
         """
 
-        mailgun_service.send_transactional_email(
+        response = mailgun_service.send_transactional_email(
             to_email=notification.user.email,
             to_name=notification.user.profile.name,
             subject=notification.title,
@@ -249,10 +257,16 @@ def send_email_notification(self, notification_id):
             attachment=attachment
         )
 
+        if response:
+            logger.info(f"✅ Email notification sent successfully to {notification.user.email}")
+            logger.info(f"📬 Mailgun Response ID: {response.get('id', 'N/A')}")
+        else:
+            logger.error(f"❌ Email notification failed for {notification.user.email}")
+
         notification.sent_at = timezone.now()
         notification.save()
 
-        logger.info(f"✅ Email notification sent to {notification.user.email}")
+        logger.info(f"✅ Notification record updated in database")
 
     except Exception as exc:
         logger.error(f"❌ Email notification error: {exc}")
