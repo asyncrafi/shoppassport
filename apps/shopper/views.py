@@ -141,7 +141,7 @@ class CheckInCreateView(BaseResponseMixin, APIView):
             try:
                 shop_owner = passport.shop.shop_owner
                 shop = passport.shop
-                shopper_name = request.user.get_full_name() or request.user.username
+                shopper_name = "Shopper"
                 shop_name = shop.shop_name
                 
                 # Notification data with PDF file info
@@ -162,7 +162,6 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     notif_data["pdf_file_path"] = file_path
                 
                 NotificationService.send_notification(
-                    user_id=shop_owner.id,
                     title="New Check-In",
                     message=f"{shopper_name} has checked in at your shop '{shop_name}'.",
                     notification_types=['in_app', 'push'],

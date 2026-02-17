@@ -229,7 +229,7 @@ def send_email_notification(self, notification_id):
             # Verify file exists before including in email
             if os.path.exists(attachment):
                 logger.info(f"✅ PDF file confirmed to exist at: {attachment}")
-                attachment_mention = "<p style=\"font-size: 14px; color: #27ae60; margin-top: 15px;\"><strong>📎 Attachment Included: Shop Details PDF</strong></p>"
+                attachment_mention = "<p style=\"font-size: 14px; color: #27ae60; margin-top: 15px;\"><strong>📎 Attachment Included: Shop Catalogue PDF</strong></p>"
             else:
                 logger.error(f"❌ PDF file NOT found at: {attachment} - Sending email WITHOUT attachment")
                 attachment = None
