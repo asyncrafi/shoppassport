@@ -149,7 +149,7 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     "action": "check_in_received",
                     "check_in_id": check_in.id,
                     "shop_id": shop.id,
-                    # "event_id": event_shop.event.id,
+                    "event_id": passport.event.id,
                     "shopper_id": request.user.id
                 }
                 
