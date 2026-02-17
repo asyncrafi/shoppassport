@@ -502,24 +502,6 @@ class DownloadQRCodeView(APIView):
         except Exception as exc:
             return Response(
                 {"success": False, "message": str(exc)},
-                    status=rest_status.HTTP_404_NOT_FOUND
-                )
-            
-            # Return QR code file
-            return Response({
-                "success": True,
-                "data": {
-                    "qr_code_url": request.build_absolute_uri(passport.shop_qr_code.url),
-                    "passport_id": passport.passport_id,
-                    "shop_name": passport.shop.shop_name,
-                    "event_name": passport.event.name
-                },
-                "message": "QR code retrieved successfully"
-            })
-            
-        except Exception as exc:
-            return Response(
-                {"success": False, "message": str(exc)},
                 status=rest_status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
