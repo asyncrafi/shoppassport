@@ -406,11 +406,11 @@ class CheckInCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         # Check if shopper already checked in to this passport
-        if ShopperCheckIn.objects.filter(
-            event_passport=data['event_passport'],
-            shopper=data['shopper']
-        ).exists():
-            raise serializers.ValidationError('Already checked in to this location')
+        # if ShopperCheckIn.objects.filter(
+        #     event_passport=data['event_passport'],
+        #     shopper=data['shopper']
+        # ).exists():
+        #     raise serializers.ValidationError('Already checked in to this location')
         
         # Check if passport is valid
         from datetime import date
@@ -424,7 +424,6 @@ class CheckInCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Passport has expired')
         
         return data
-    
 
 
 class EventApproveRejectSerializer(serializers.Serializer):
