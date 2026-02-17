@@ -165,9 +165,22 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     user_id=shop_owner.id,
                     title="New Check-In",
                     message=f"{shopper_name} has checked in at your shop '{shop_name}'.",
-                    notification_types=['in_app', 'push', 'email'],
+                    notification_types=['in_app', 'push'],
                     data=notif_data
                 )
+                # Also send a confirmation email to the shopper
+                try:
+                    shopper_notif_data = notif_data.copy()
+                    NotificationService.send_notification(
+                        user_id=request.user.id,
+                        title="Check-In Confirmation",
+                        message=f"You have successfully checked in at '{shop_name}'.",
+                        notification_types=['email'],
+                        data=shopper_notif_data
+                    )
+                except Exception:
+                    # Do not let shopper notification failure block owner notification
+                    logger.exception('Failed to send check-in confirmation to shopper')
             except Exception as notif_exc:
                 logger.error(f"Failed to send check-in notification: {notif_exc}", exc_info=True)
             
