@@ -15,7 +15,7 @@ class MailgunEmailService:
         logger.info(f"📧 Mailgun Service initialized for domain: {self.domain}")
 
     def send_transactional_email(self, to_email, to_name, subject, html_content, text_content=None, attachment=None):
-        """Send a single transactional email via Mailgun with optional attachments"""
+        """Send a single transactional email via Mailgun with optional attachments - ALWAYS sends email"""
         try:
             data = {
                 "from": f"{self.from_name} <{self.from_email}>",
@@ -27,30 +27,50 @@ class MailgunEmailService:
             if text_content:
                 data["text"] = text_content
 
-            # Handle file attachments
+            # Handle file attachments (optional - email still sent even without attachment)
             files = None
+            attachment_status = "(no attachment)"
+            
             if attachment:
                 files = {}
                 if isinstance(attachment, str):
                     # If it's a file path string
                     try:
                         with open(attachment, 'rb') as f:
-                            files['attachment'] = (attachment.split('/')[-1], f.read())
-                        print(f"✅ Attachment loaded successfully: {attachment}")
+                            file_content = f.read()
+                            files['attachment'] = (attachment.split('/')[-1], file_content)
+                        logger.info(f"✅ Attachment loaded: {attachment}")
+                        attachment_status = f"(PDF attached: {attachment.split('/')[-1]})"
                     except FileNotFoundError:
-                        print(f"❌ CRITICAL: Attachment file not found: {attachment}")
+                        logger.error(f"❌ File not found: {attachment} - Sending WITHOUT attachment")
+                        attachment_status = "(attachment not found - sending without)"
+                        files = None
                     except Exception as e:
-                        print(f"❌ CRITICAL: Error loading attachment {attachment}: {str(e)}")
+                        logger.error(f"❌ Error loading attachment {attachment}: {str(e)}")
+                        attachment_status = f"(attachment error - sending without)"
+                        files = None
+                        
                 elif isinstance(attachment, dict):
                     # If it's a dict with file_path and other metadata
                     file_path = attachment.get('file_path')
                     if file_path:
                         try:
                             with open(file_path, 'rb') as f:
-                                files['attachment'] = (attachment.get('file_name', file_path.split('/')[-1]), f.read())
+                                file_content = f.read()
+                                files['attachment'] = (attachment.get('file_name', file_path.split('/')[-1]), file_content)
+                            logger.info(f"✅ Attachment loaded: {file_path}")
+                            attachment_status = "(PDF attached)"
                         except FileNotFoundError:
-                            print(f"⚠️ Attachment file not found: {file_path}")
+                            logger.error(f"❌ File not found: {file_path} - Sending WITHOUT attachment")
+                            attachment_status = "(attachment not found - sending without)"
+                            files = None
+                        except Exception as e:
+                            logger.error(f"❌ Error loading attachment {file_path}: {str(e)}")
+                            attachment_status = "(attachment error - sending without)"
+                            files = None
 
+            logger.info(f"📤 Sending email to {to_email} {attachment_status}")
+            
             response = requests.post(
                 self.base_url,
                 auth=("api", self.api_key),
@@ -60,17 +80,27 @@ class MailgunEmailService:
             )
 
             if response.status_code == 200:
+                response_data = response.json()
+                logger.info(f"✅ Email SENT to {to_email}")
+                logger.info(f"📬 Mailgun ID: {response_data.get('id', 'N/A')}")
                 print(f"✅ Email sent successfully to {to_email}")
-                print(f"📨 Mailgun Response: {response.json()}")
-                return response.json()
+                print(f"📨 Mailgun Response: {response_data}")
+                return response_data
             else:
+                logger.error(f"❌ Email FAILED for {to_email}")
+                logger.error(f"❌ Status: {response.status_code} | Response: {response.text}")
                 print(f"❌ Failed to send email to {to_email}")
                 print(f"❌ Status Code: {response.status_code}")
-                print(f"❌ Mailgun Response: {response.text}")
+                print(f"❌ Response: {response.text}")
                 return None
 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Exception when sending email to {to_email}: {str(e)}")
+            logger.error(f"❌ Request Exception for {to_email}: {str(e)}")
+            print(f"❌ Exception when sending email: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"❌ Unexpected Exception for {to_email}: {str(e)}")
+            print(f"❌ Unexpected error: {str(e)}")
             return None
 
     def send_bulk_email(self, recipients, subject, html_content, text_content=None):

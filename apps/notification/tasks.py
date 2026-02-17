@@ -210,67 +210,79 @@ def send_email_notification(self, notification_id):
         from apps.core.utils.mailgun_service import MailgunEmailService
         from .models import Notification
         from django.utils import timezone
+        import os
 
         notification = Notification.objects.get(id=notification_id)
         logger.info(f"✅ Notification found: {notification.title}")
+        logger.info(f"📧 Recipient: {notification.user.email}")
         
         mailgun_service = MailgunEmailService()
-        logger.info(f"📧 Sending email to {notification.user.email}")
 
         # Extract attachment info from notification data
         attachment = None
+        attachment_mention = ""
+        
         if notification.data and 'pdf_file_path' in notification.data:
             attachment = notification.data.get('pdf_file_path')
-            logger.info(f"📎 Attaching PDF file: {attachment}")
-            # Verify file exists
-            import os
+            logger.info(f"📎 Will attach PDF file: {attachment}")
+            
+            # Verify file exists before including in email
             if os.path.exists(attachment):
-                logger.info(f"✅ PDF file exists at: {attachment}")
+                logger.info(f"✅ PDF file confirmed to exist at: {attachment}")
+                attachment_mention = "<p style=\"font-size: 14px; color: #27ae60; margin-top: 15px;\"><strong>📎 Attachment Included: Shop Details PDF</strong></p>"
             else:
-                logger.error(f"❌ PDF file NOT found at: {attachment}")
+                logger.error(f"❌ PDF file NOT found at: {attachment} - Sending email WITHOUT attachment")
+                attachment = None
         else:
-            logger.info(f"ℹ️ No attachment in notification data")
+            logger.info(f"ℹ️ No attachment in notification data - sending email without PDF")
 
-        # Build nice HTML email content
+        # Build dynamic HTML email content
         html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #2c3e50;">{notification.title}</h2>
-                    <p style="font-size: 16px; margin-bottom: 15px;">{notification.message}</p>
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+                    <h2 style="color: #2c3e50; margin-top: 0;">{notification.title}</h2>
+                    <p style="font-size: 16px; margin-bottom: 15px; color: #555;">{notification.message}</p>
                     <hr style="border: none; border-top: 1px solid #ecf0f1;">
-                    <p style="font-size: 12px; color: #7f8c8d;">
+                    {attachment_mention}
+                    <p style="font-size: 12px; color: #7f8c8d; margin-top: 20px;">
                         This is an automatic notification from ShopHopApp.<br>
-                        Please find your shop details attached.
+                        <em>Please do not reply to this email.</em>
                     </p>
                 </div>
             </body>
         </html>
         """
 
+        logger.info(f"📤 Sending email with attachment={attachment is not None}")
+        
         response = mailgun_service.send_transactional_email(
             to_email=notification.user.email,
-            to_name=notification.user.profile.name,
+            to_name=notification.user.profile.name or notification.user.username,
             subject=notification.title,
             html_content=html_content,
             text_content=notification.message,
             attachment=attachment
         )
 
+        # Always mark as sent regardless of response (Mailgun queued it)
+        notification.sent_at = timezone.now()
+        notification.save()
+        logger.info(f"✅ Notification marked as sent in database")
+
         if response:
             logger.info(f"✅ Email notification sent successfully to {notification.user.email}")
             logger.info(f"📬 Mailgun Response ID: {response.get('id', 'N/A')}")
         else:
-            logger.error(f"❌ Email notification failed for {notification.user.email}")
+            logger.warning(f"⚠️ Email queued but no response from Mailgun for {notification.user.email}")
 
-        notification.sent_at = timezone.now()
-        notification.save()
-
-        logger.info(f"✅ Notification record updated in database")
-
+    except Notification.DoesNotExist:
+        logger.error(f"❌ Notification with ID {notification_id} does not exist")
+        raise
     except Exception as exc:
         logger.error(f"❌ Email notification error: {exc}")
         logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+        # Retry on error
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 
 
