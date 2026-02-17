@@ -142,21 +142,7 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                 shop_owner = passport.shop.shop_owner
                 shop = passport.shop
                 shopper_name = request.user.get_full_name() or request.user.username
-
-                # Sanitize shop name: if missing or a placeholder like 'notification',
-                # fall back to owner's name, shop email, or a generic label.
-                raw_shop_name = (shop.shop_name or '').strip()
-                if not raw_shop_name or raw_shop_name.lower() == 'notification':
-                    owner_name = None
-                    try:
-                        if shop.shop_owner:
-                            owner_name = shop.shop_owner.get_full_name() or None
-                    except Exception:
-                        owner_name = None
-
-                    shop_name = owner_name or shop.email or f"Shop {shop.id}"
-                else:
-                    shop_name = raw_shop_name
+                shop_name = shop.shop_name
                 
                 # Notification data with PDF file info
                 notif_data = {
