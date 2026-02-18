@@ -24,6 +24,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://shophopapp.com",
     "https://www.shophopapp.com",
     "https://api.shophopapp.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -41,9 +43,6 @@ CSRF_TRUSTED_ORIGINS = [
     "http://shophopapp.com",     
     "http://www.shophopapp.com",
     "http://api.shophopapp.com",
-    "http://localhost:3000",
-    "http://localhost:3001",
-
 ]
 
 CORS_ALLOW_CREDENTIALS = True
