@@ -26,6 +26,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://api.shophopapp.com",
     "http://localhost:3000",
     "http://localhost:3001",
+    "https://dashboard.shophopapp.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
