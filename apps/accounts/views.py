@@ -34,6 +34,9 @@ from apps.accounts.serializers import (
     UserProfileSerializer,
     DeleteUserSerializer,
 )
+
+# imported to send verification OTP when resending
+from dj_rest_auth.registration.serializers import RegisterSerializer
 from apps.notification.services.notification_service import NotificationService
 from rest_framework.generics import RetrieveUpdateAPIView
 from django.conf import settings
