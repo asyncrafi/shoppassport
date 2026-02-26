@@ -95,7 +95,6 @@ class PassportByIdView(BaseResponseMixin, APIView):
 
 
 # ==================== SHOPPER CHECK-INS ====================
-
 class CheckInCreateView(BaseResponseMixin, APIView):
     """
     Shopper checks in by scanning QR code
@@ -118,6 +117,7 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     passport_id=data['passport_id']
                 )
                 data['event_passport'] = passport.id
+                # Remove passport_id from data since serializer expects event_passport
                 data.pop('passport_id')
             
             serializer = CheckInCreateSerializer(data=data)
@@ -136,8 +136,9 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                 message="Check-in successful"
             )
             
-            # Send confirmation notification to shopper only
+            # Send notification to shop owner (push + in_app)
             try:
+                shop_owner = passport.shop.shop_owner
                 shop = passport.shop
                 shop_name = shop.shop_name
                 
@@ -149,13 +150,24 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     "shopper_id": request.user.id
                 }
                 
-                # Add PDF file path if it exists
                 if shop.upload_pdf_pattern:
                     from django.conf import settings
                     import os
                     file_path = os.path.join(settings.MEDIA_ROOT, shop.upload_pdf_pattern.name)
                     notif_data["pdf_file_path"] = file_path
                 
+                NotificationService.send_notification(
+                    user_id=shop_owner.id,
+                    title="New Check-In",
+                    message=f"A shopper has checked in at your shop '{shop_name}'.",
+                    notification_types=['in_app', 'push'],
+                    data=notif_data
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send shop owner notification: {notif_exc}", exc_info=True)
+            
+            # Send confirmation email to shopper
+            try:
                 NotificationService.send_notification(
                     user_id=request.user.id,
                     title="Check-In Confirmation",
@@ -164,11 +176,103 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     data=notif_data
                 )
             except Exception as notif_exc:
-                logger.error(f"Failed to send check-in confirmation to shopper: {notif_exc}", exc_info=True)
+                logger.error(f"Failed to send shopper email: {notif_exc}", exc_info=True)
             
             return response_data
         except Exception as exc:
             return self.handle_exception(exc)
+# class CheckInCreateView(BaseResponseMixin, APIView):
+#     """
+#     Shopper checks in by scanning QR code
+#     Can accept either:
+#     - event_passport: <passport_pk> (integer)
+#     - passport_id: <passport_string_id> (e.g., "1-49-abc123")
+#     """
+#     permission_classes = [IsAuthenticated]
+    
+#     def post(self, request):
+#         try:
+#             # Add current user as shopper
+#             data = request.data.copy()
+#             data['shopper'] = request.user.id
+            
+#             # If passport_id (string) is provided, resolve to event_passport (PK)
+#             if 'passport_id' in data and 'event_passport' not in data:
+#                 passport = get_object_or_404(
+#                     EventPassport,
+#                     passport_id=data['passport_id']
+#                 )
+#                 data['event_passport'] = passport.id
+#                 # Remove passport_id from data since serializer expects event_passport
+#                 data.pop('passport_id')
+            
+#             serializer = CheckInCreateSerializer(data=data)
+#             serializer.is_valid(raise_exception=True)
+#             check_in = serializer.save()
+            
+#             # Mark passport as visited
+#             passport = check_in.event_passport
+#             passport.is_visited = True
+#             passport.total_visits = passport.check_ins.count()
+#             passport.save()
+            
+#             response_serializer = CheckInDetailSerializer(check_in)
+#             response_data = self.created_response(
+#                 data=response_serializer.data,
+#                 message="Check-in successful"
+#             )
+            
+#             # Send notifications to shop owner (async)
+#             try:
+#                 shop_owner = passport.shop.shop_owner
+#                 shop = passport.shop
+#                 shopper_name = "Shopper"
+#                 shop_name = shop.shop_name
+                
+#                 # Notification data with PDF file info
+#                 notif_data = {
+#                     "action": "check_in_received",
+#                     "check_in_id": check_in.id,
+#                     "shop_id": shop.id,
+#                     "event_id": passport.event.id,
+#                     "shopper_id": request.user.id
+#                 }
+                
+#                 # Add PDF file path if it exists
+#                 if shop.upload_pdf_pattern:
+#                     # Get the absolute file path properly
+#                     from django.conf import settings
+#                     import os
+#                     file_path = os.path.join(settings.MEDIA_ROOT, shop.upload_pdf_pattern.name)
+#                     notif_data["pdf_file_path"] = file_path
+                
+#                 NotificationService.send_notification(
+#                     user_id=shop_owner.id,
+#                     title="New Check-In",
+#                     message=f"{shopper_name} has checked in at your shop '{shop_name}'.",
+#                     notification_types=['in_app', 'push'],
+#                     data=notif_data
+#                 )
+#                 # Also send a confirmation email to the shopper
+#                 try:
+#                     shopper_notif_data = notif_data.copy()
+#                     NotificationService.send_notification(
+#                         user_id=request.user.id,
+#                         title="Check-In Confirmation",
+#                         message=f"You have successfully checked in at '{shop_name}'.",
+#                         notification_types=['email'],
+#                         data=shopper_notif_data
+#                     )
+#                 except Exception:
+#                     # Do not let shopper notification failure block owner notification
+#                     logger.exception('Failed to send check-in confirmation to shopper')
+#             except Exception as notif_exc:
+#                 logger.error(f"Failed to send check-in notification: {notif_exc}", exc_info=True)
+            
+#             return response_data
+#         except Exception as exc:
+#             return self.handle_exception(exc)
+
 
 class MyCheckInListView(BaseResponseMixin, APIView):
     """List all check-ins for current shopper"""
