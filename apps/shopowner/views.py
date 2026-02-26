@@ -123,7 +123,7 @@ class ShopRequestApproveView(BaseResponseMixin, APIView):
             # Send notification to shop owner (async)
             try:
                 shop_owner = event_shop.shop.shop_owner
-                shop_name = event_shop.shop.name
+                shop_name = event_shop.shop.shop_name
                 event_name = event_shop.event.name
                 NotificationService.send_notification(
                     user_id=shop_owner.id,
@@ -166,7 +166,7 @@ class ShopRequestRejectView(BaseResponseMixin, APIView):
             # Send notification to shop owner (async)
             try:
                 shop_owner = event_shop.shop.shop_owner
-                shop_name = event_shop.shop.name
+                shop_name = event_shop.shop.shop_name
                 event_name = event_shop.event.name
                 NotificationService.send_notification(
                     user_id=shop_owner.id,
@@ -211,7 +211,7 @@ class ParticipantRequestCreateView(BaseResponseMixin, APIView):
             # Send notification to event admin (async)
             try:
                 event_admin = participant.event_shop.event.shop_admin
-                shop_name = participant.event_shop.shop.name
+                shop_name = participant.event_shop.shop.shop_name
                 NotificationService.send_notification(
                     user_id=event_admin.id,
                     title="New Shop Participation Request",
