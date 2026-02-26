@@ -60,6 +60,7 @@ class NotificationViewSet(BaseResponseMixin, viewsets.ModelViewSet):
 
 class FCMTokenViewSet(BaseResponseMixin, viewsets.ModelViewSet):
     serializer_class = FCMTokenSerializer
+    permission_classes = [IsAuthenticated]
     
     def get_permissions(self):
         if self.action == 'create':

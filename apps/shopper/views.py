@@ -181,6 +181,8 @@ class CheckInCreateView(BaseResponseMixin, APIView):
             return response_data
         except Exception as exc:
             return self.handle_exception(exc)
+        
+        
 # class CheckInCreateView(BaseResponseMixin, APIView):
 #     """
 #     Shopper checks in by scanning QR code
