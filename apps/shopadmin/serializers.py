@@ -365,7 +365,8 @@ class PassportCreateSerializer(serializers.ModelSerializer):
 
 class CheckInListSerializer(serializers.ModelSerializer):
     """List check-ins"""
-    shopper_name = serializers.CharField(source='shopper.get_full_name', read_only=True)
+    shopper_name = serializers.CharField(source='shopper.profile.name', read_only=True)
+    shopper_phone = serializers.CharField(source='shopper.profile.phone', read_only=True)
     shopper_email = serializers.EmailField(source='shopper.email', read_only=True)
     event_name = serializers.CharField(source='event_passport.event.name', read_only=True)
     shop_name = serializers.CharField(source='event_passport.shop.shop_name', read_only=True)
@@ -375,7 +376,7 @@ class CheckInListSerializer(serializers.ModelSerializer):
         model = ShopperCheckIn
         fields = [
             'id', 'event_passport', 'shopper', 'shopper_name',
-            'shopper_email', 'event_name', 'shop_name', 'passport_id',
+            'shopper_phone', 'shopper_email', 'event_name', 'shop_name', 'passport_id',
             'status', 'check_in_time', 'created_at'
         ]
         read_only_fields = ['id', 'check_in_time', 'created_at', 'status']
@@ -383,7 +384,8 @@ class CheckInListSerializer(serializers.ModelSerializer):
 
 class CheckInDetailSerializer(serializers.ModelSerializer):
     """Detailed check-in view"""
-    shopper_name = serializers.CharField(source='shopper.get_full_name', read_only=True)
+    shopper_name = serializers.CharField(source='shopper.profile.name', read_only=True)
+    shopper_phone = serializers.CharField(source='shopper.profile.phone', read_only=True)
     shopper_email = serializers.EmailField(source='shopper.email', read_only=True)
     event_passport_details = PassportDetailSerializer(source='event_passport', read_only=True)
     
@@ -391,7 +393,7 @@ class CheckInDetailSerializer(serializers.ModelSerializer):
         model = ShopperCheckIn
         fields = [
             'id', 'event_passport', 'shopper', 'shopper_name',
-            'shopper_email', 'event_passport_details', 'status',
+            'shopper_phone', 'shopper_email', 'event_passport_details', 'status',
             'check_in_time', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'check_in_time', 'created_at', 'updated_at', 'status']
@@ -548,13 +550,14 @@ class AcceptedEventWithShopsSerializer(serializers.ModelSerializer):
 
 class CheckInUserSerializer(serializers.ModelSerializer):
     """Serializer for users who checked in"""
-    shopper_name = serializers.CharField(source='shopper.get_full_name', read_only=True)
+    shopper_name = serializers.CharField(source='shopper.profile.name', read_only=True)
+    shopper_phone = serializers.CharField(source='shopper.profile.phone', read_only=True)
     shopper_email = serializers.EmailField(source='shopper.email', read_only=True)
     shopper_avatar = serializers.SerializerMethodField()
     
     class Meta:
         model = ShopperCheckIn
-        fields = ['id', 'shopper_id', 'shopper_name', 'shopper_email', 'shopper_avatar', 'check_in_time', 'status']
+        fields = ['id', 'shopper_id', 'shopper_name', 'shopper_phone', 'shopper_email', 'shopper_avatar', 'check_in_time', 'status']
         read_only_fields = fields
     
     def get_shopper_avatar(self, obj):
