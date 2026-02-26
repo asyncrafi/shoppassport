@@ -162,6 +162,7 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     notif_data["pdf_file_path"] = file_path
                 
                 NotificationService.send_notification(
+                    user_id=shop_owner.id,
                     title="New Check-In",
                     message=f"{shopper_name} has checked in at your shop '{shop_name}'.",
                     notification_types=['in_app', 'push'],
