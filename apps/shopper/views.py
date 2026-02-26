@@ -161,13 +161,20 @@ class CheckInCreateView(BaseResponseMixin, APIView):
                     file_path = os.path.join(settings.MEDIA_ROOT, shop.upload_pdf_pattern.name)
                     notif_data["pdf_file_path"] = file_path
                 
-                NotificationService.send_notification(
-                    user_id=shop_owner.id,
-                    title="New Check-In",
-                    message=f"{shopper_name} has checked in at your shop '{shop_name}'.",
-                    notification_types=['in_app', 'push'],
-                    data=notif_data
-                )
+                # Only notify the shop owner if they're a different user than the
+                # shopper.  when the same account performs a check-in we don't
+                # want to send the "New Check‑In" push/email right back to
+                # itself.
+                if shop_owner and shop_owner.id != request.user.id:
+                    NotificationService.send_notification(
+                        user_id=shop_owner.id,
+                        title="New Check-In",
+                        message=f"{shopper_name} has checked in at your shop '{shop_name}'.",
+                        notification_types=['in_app', 'push'],
+                        data=notif_data
+                    )
+                else:
+                    logger.info("Skipping owner notification (shop owner == shopper)")
                 # Also send a confirmation email to the shopper
                 try:
                     shopper_notif_data = notif_data.copy()
