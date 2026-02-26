@@ -56,10 +56,32 @@ class EventShopCreateView(BaseResponseMixin, APIView):
             event_shop = serializer.save()
             
             response_serializer = EventShopListSerializer(event_shop)
-            return self.created_response(
+            response_data = self.created_response(
                 data=response_serializer.data,
                 message="Shop request sent. Waiting for event admin approval"
             )
+            
+            # Send notification to event admin (async)
+            try:
+                event_admin = event_shop.event.shop_admin
+                shop_name = event_shop.shop.shop_name
+                event_name = event_shop.event.name
+                NotificationService.send_notification(
+                    user_id=event_admin.id,
+                    title="New Shop Request",
+                    message=f"Shop '{shop_name}' has requested to participate in '{event_name}'.",
+                    notification_types=['in_app', 'push'],
+                    data={
+                        "action": "shop_request_received",
+                        "event_shop_id": event_shop.id,
+                        "event_id": event_shop.event.id,
+                        "shop_id": event_shop.shop.id
+                    }
+                )
+            except Exception as notif_exc:
+                logger.error(f"Failed to send shop request notification: {notif_exc}", exc_info=True)
+            
+            return response_data
         except Exception as exc:
             return self.handle_exception(exc)
 
