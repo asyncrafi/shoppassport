@@ -112,7 +112,8 @@ class UserNotificationPreference(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.email} - Preferences"
+        user_email = self.user.email if self.user else "No User"
+        return f"{user_email} - Preferences"
     
     class Meta:
         verbose_name_plural = "User Notification Preferences"
@@ -127,7 +128,9 @@ class FCMToken(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.email} - {self.token}"
+        user_email = self.user.email if self.user else "No User"
+        token_display = self.token or "No Token"
+        return f"{user_email} - {token_display}"
     
     class Meta:
         ordering = ['-created_at']
