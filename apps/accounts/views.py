@@ -335,8 +335,10 @@ class ResendOTPView(BaseResponseMixin, generics.GenericAPIView):
                         message="Email is already verified",
                         status_code=status.HTTP_400_BAD_REQUEST
                     )
-                register_serializer = RegisterSerializer()
-                register_serializer.send_verification_otp(user)
+                # use one of our local registration serializers; they all
+                # expose the same helper to send an OTP
+                serializer = ShopperRegisterSerializer()
+                serializer.send_verification_otp(user)
             elif purpose == "password_reset":
                 reset_serializer = PasswordResetRequestSerializer()
                 reset_serializer.send_reset_otp(email)
