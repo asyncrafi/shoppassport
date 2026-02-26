@@ -701,25 +701,124 @@ class MyEventsWithCheckInsListView(BaseResponseMixin, APIView):
     """
     GET /api/shopowner/my-events-with-checkins/
     Shop owner sees all events their shops are in + users who checked in their shops
+    Each event appears once with all their shops grouped together
     """
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
         try:
-            # Get all events where current shop owner has shops
-            queryset = EventShop.objects.filter(
-                shop__shop_owner=request.user,
-                status='accepted'  # Only accepted shops
-            ).order_by('-created_at')
+            from django.db.models import Prefetch
+            from apps.shopadmin.models import EventPassport, ShopperCheckIn
             
-            serializer = ShopOwnerEventWithShopsSerializer(
-                queryset,
-                many=True,
-                context={'request': request}
-            )
+            # Get all unique events where current shop owner has accepted shops
+            event_shop_queryset = EventShop.objects.filter(
+                shop__shop_owner=request.user,
+                status='accepted'
+            ).values_list('event', flat=True).distinct()
+            
+            # Get events with their passports and check-ins prefetched
+            events = Event.objects.filter(id__in=event_shop_queryset).prefetch_related(
+                Prefetch(
+                    'passports',
+                    EventPassport.objects.filter(
+                        shop__shop_owner=request.user
+                    ).prefetch_related(
+                        'check_ins'
+                    )
+                )
+            ).order_by('-id')
+            
+            # Serialize events with all shops grouped
+            data = []
+            for event in events:
+                event_data = {
+                    'id': event.id,
+                    'event': event.id,
+                    'event_name': event.name,
+                    'event_location': event.location,
+                    'event_image': None,
+                    'event_from_date': event.from_date,
+                    'event_to_date': event.to_date,
+                    'event_status': event.status,
+                }
+                
+                # Add first image if exists
+                first_image = event.images.first()
+                if first_image and request:
+                    event_data['event_image'] = request.build_absolute_uri(first_image.image.url)
+                
+                # Add all shops for this owner in this event
+                shops_data = []
+                for passport in event.passports.all():
+                    shop_data = {
+                        'id': passport.id,
+                        'shop_id': passport.shop.id,
+                        'shop_name': passport.shop.shop_name,
+                        'shop_location': passport.shop.shop_location,
+                        'shop_logo': None,
+                        'passport_qr_id': passport.passport_id,
+                        'shop_phone': passport.shop.contact_person_phone,
+                        'qr_code_url': None,
+                        'total_check_ins': passport.check_ins.count(),
+                        'unique_visitors': passport.check_ins.values('shopper').distinct().count(),
+                        'check_ins': [],
+                        'valid_from': passport.valid_from,
+                        'valid_to': passport.valid_to
+                    }
+                    
+                    # Add shop logo
+                    if passport.shop.shop_logo and request:
+                        shop_data['shop_logo'] = request.build_absolute_uri(passport.shop.shop_logo.url)
+                    
+                    # Add QR code
+                    if passport.shop_qr_code and request:
+                        shop_data['qr_code_url'] = request.build_absolute_uri(passport.shop_qr_code.url)
+                    
+                    # Add check-ins for this shop
+                    check_ins = passport.check_ins.order_by('-check_in_time')
+                    for check_in in check_ins:
+                        check_in_data = {
+                            'id': check_in.id,
+                            'shopper_id': check_in.shopper.id,
+                            'shopper_name': check_in.shopper.profile.name if hasattr(check_in.shopper, 'profile') else '',
+                            'shopper_phone': check_in.shopper.profile.phone if hasattr(check_in.shopper, 'profile') else '',
+                            'shopper_email': check_in.shopper.email,
+                            'shopper_avatar': None,
+                            'check_in_time': check_in.check_in_time,
+                            'status': check_in.status
+                        }
+                        
+                        # Add avatar
+                        if (check_in.shopper and hasattr(check_in.shopper, 'profile') and 
+                            check_in.shopper.profile.profile_picture and request):
+                            check_in_data['shopper_avatar'] = request.build_absolute_uri(
+                                check_in.shopper.profile.profile_picture.url
+                            )
+                        
+                        shop_data['check_ins'].append(check_in_data)
+                    
+                    shops_data.append(shop_data)
+                
+                event_data['shops'] = shops_data
+                event_data['total_shops'] = len(shops_data)
+                
+                # Count total check-ins across all shops
+                total_check_ins = sum(shop['total_check_ins'] for shop in shops_data)
+                event_data['total_check_ins'] = total_check_ins
+                event_data['created_at'] = EventShop.objects.filter(
+                    event=event,
+                    shop__shop_owner=request.user,
+                    status='accepted'
+                ).order_by('-created_at').first().created_at if EventShop.objects.filter(
+                    event=event,
+                    shop__shop_owner=request.user,
+                    status='accepted'
+                ).exists() else event.created_at
+                
+                data.append(event_data)
             
             return self.success_response(
-                data=serializer.data,
+                data=data,
                 message="My events with check-ins retrieved successfully"
             )
         except Exception as exc:
@@ -729,36 +828,122 @@ class MyEventsWithCheckInsListView(BaseResponseMixin, APIView):
 class MyEventsWithCheckInsDetailView(BaseResponseMixin, APIView):
     """
     GET /api/shopowner/my-events-with-checkins/{event_id}/
-    Shop owner sees detailed view of one event with their shops and all check-ins
+    Shop owner sees detailed view of one event with all their shops and check-ins grouped
     """
     permission_classes = [IsAuthenticated]
     
     def get(self, request, event_id):
         try:
+            from django.db.models import Prefetch
+            from apps.shopadmin.models import EventPassport
+            
             event = get_object_or_404(Event, pk=event_id)
             
-            # Get all event-shop combinations for this owner in this event
-            queryset = EventShop.objects.filter(
+            # Check if owner has any shops in this event
+            has_shops = EventShop.objects.filter(
                 event=event,
                 shop__shop_owner=request.user,
                 status='accepted'
-            )
+            ).exists()
             
-            if not queryset.exists():
+            if not has_shops:
                 return self.error_response(
                     message="You have no shops in this event"
                 )
             
-            # Return first one (or could return all if owner has multiple shops in same event)
-            event_shop = queryset.first()
+            # Get event with passports for this owner prefetched
+            event = Event.objects.prefetch_related(
+                Prefetch(
+                    'passports',
+                    EventPassport.objects.filter(
+                        shop__shop_owner=request.user
+                    ).prefetch_related('check_ins')
+                )
+            ).get(pk=event_id)
             
-            serializer = ShopOwnerEventWithShopsSerializer(
-                event_shop,
-                context={'request': request}
-            )
+            # Build response data
+            event_data = {
+                'id': event.id,
+                'event': event.id,
+                'event_name': event.name,
+                'event_location': event.location,
+                'event_image': None,
+                'event_from_date': event.from_date,
+                'event_to_date': event.to_date,
+                'event_status': event.status,
+            }
+            
+            # Add first image if exists
+            first_image = event.images.first()
+            if first_image and request:
+                event_data['event_image'] = request.build_absolute_uri(first_image.image.url)
+            
+            # Add all shops for this owner in this event
+            shops_data = []
+            for passport in event.passports.all():
+                shop_data = {
+                    'id': passport.id,
+                    'shop_id': passport.shop.id,
+                    'shop_name': passport.shop.shop_name,
+                    'shop_location': passport.shop.shop_location,
+                    'shop_logo': None,
+                    'passport_qr_id': passport.passport_id,
+                    'shop_phone': passport.shop.contact_person_phone,
+                    'qr_code_url': None,
+                    'total_check_ins': passport.check_ins.count(),
+                    'unique_visitors': passport.check_ins.values('shopper').distinct().count(),
+                    'check_ins': [],
+                    'valid_from': passport.valid_from,
+                    'valid_to': passport.valid_to
+                }
+                
+                # Add shop logo
+                if passport.shop.shop_logo and request:
+                    shop_data['shop_logo'] = request.build_absolute_uri(passport.shop.shop_logo.url)
+                
+                # Add QR code
+                if passport.shop_qr_code and request:
+                    shop_data['qr_code_url'] = request.build_absolute_uri(passport.shop_qr_code.url)
+                
+                # Add check-ins for this shop
+                check_ins = passport.check_ins.order_by('-check_in_time')
+                for check_in in check_ins:
+                    check_in_data = {
+                        'id': check_in.id,
+                        'shopper_id': check_in.shopper.id,
+                        'shopper_name': check_in.shopper.profile.name if hasattr(check_in.shopper, 'profile') else '',
+                        'shopper_phone': check_in.shopper.profile.phone if hasattr(check_in.shopper, 'profile') else '',
+                        'shopper_email': check_in.shopper.email,
+                        'shopper_avatar': None,
+                        'check_in_time': check_in.check_in_time,
+                        'status': check_in.status
+                    }
+                    
+                    # Add avatar
+                    if (check_in.shopper and hasattr(check_in.shopper, 'profile') and 
+                        check_in.shopper.profile.profile_picture and request):
+                        check_in_data['shopper_avatar'] = request.build_absolute_uri(
+                            check_in.shopper.profile.profile_picture.url
+                        )
+                    
+                    shop_data['check_ins'].append(check_in_data)
+                
+                shops_data.append(shop_data)
+            
+            event_data['shops'] = shops_data
+            event_data['total_shops'] = len(shops_data)
+            
+            # Count total check-ins across all shops
+            total_check_ins = sum(shop['total_check_ins'] for shop in shops_data)
+            event_data['total_check_ins'] = total_check_ins
+            event_data['created_at'] = EventShop.objects.filter(
+                event=event,
+                shop__shop_owner=request.user,
+                status='accepted'
+            ).order_by('-created_at').first().created_at
             
             return self.success_response(
-                data=serializer.data,
+                data=event_data,
                 message="Event details retrieved successfully"
             )
         except Exception as exc:

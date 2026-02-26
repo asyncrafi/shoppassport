@@ -515,10 +515,11 @@ class AcceptedEventWithShopsSerializer(serializers.ModelSerializer):
         read_only_fields = fields
     
     def get_event_image(self, obj):
-        """Get event image"""
+        """Get event image (first image only)"""
         request = self.context.get('request')
-        if obj.event.image and request:
-            return request.build_absolute_uri(obj.event.image.url)
+        first_image = obj.event.images.first()
+        if first_image and request:
+            return request.build_absolute_uri(first_image.image.url)
         return None
     
     def get_shops(self, obj):
